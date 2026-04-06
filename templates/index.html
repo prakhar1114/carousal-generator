@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carousel Gen</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #0f172a;
+            --panel: #111827;
+            --panel-soft: #1f2937;
+            --border: #334155;
+            --text: #e5eefc;
+            --muted: #94a3b8;
+            --accent: #14b8a6;
+            --accent-strong: #0f766e;
+            --danger: #ef4444;
+            --shadow: 0 24px 60px rgba(2, 6, 23, 0.35);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top right, rgba(20, 184, 166, 0.22), transparent 30%),
+                linear-gradient(180deg, #0f172a 0%, #020617 100%);
+            color: var(--text);
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+        button {
+            border: 1px solid transparent;
+            border-radius: 12px;
+            padding: 0.7rem 1rem;
+            background: var(--panel-soft);
+            color: var(--text);
+            cursor: pointer;
+            transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(148, 163, 184, 0.35);
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button:disabled:hover {
+            transform: none;
+            border-color: transparent;
+        }
+
+        button.primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: white;
+        }
+
+        button.danger {
+            background: rgba(239, 68, 68, 0.12);
+            border-color: rgba(239, 68, 68, 0.35);
+            color: #fecaca;
+        }
+
+        button.subtle {
+            background: rgba(15, 23, 42, 0.55);
+            border-color: var(--border);
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.7);
+            color: var(--text);
+            padding: 0.75rem 0.9rem;
+        }
+
+        textarea {
+            min-height: 70px;
+            resize: vertical;
+            field-sizing: content;
+            line-height: 1.5;
+        }
+
+        .page {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            border-right: 1px solid rgba(148, 163, 184, 0.12);
+            background: rgba(2, 6, 23, 0.82);
+            backdrop-filter: blur(18px);
+            padding: 1.2rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .brand {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 1.1rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .sidebar p {
+            color: var(--muted);
+            margin-top: 0;
+        }
+
+        .project-list {
+            display: grid;
+            gap: 0.65rem;
+            margin-top: 1rem;
+        }
+
+        .project-item {
+            width: 100%;
+            text-align: left;
+            padding: 0.9rem 1rem;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            background: rgba(15, 23, 42, 0.65);
+        }
+
+        .project-item.active {
+            border-color: rgba(20, 184, 166, 0.65);
+            background: rgba(20, 184, 166, 0.15);
+        }
+
+        .project-item small {
+            display: block;
+            color: var(--muted);
+            margin-top: 0.35rem;
+        }
+
+        .content {
+            padding: 1.5rem;
+        }
+
+        .topbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .topbar h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .status {
+            min-height: 1.5rem;
+            color: var(--muted);
+        }
+
+        .status.error {
+            color: #fca5a5;
+        }
+
+        .panel {
+            background: rgba(17, 24, 39, 0.85);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .settings {
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 220px));
+            gap: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .field {
+            display: grid;
+            gap: 0.45rem;
+        }
+
+        .field label {
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .slides {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .slide-card {
+            display: grid;
+            grid-template-columns: minmax(320px, 1fr) minmax(280px, 1fr);
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .slide-left,
+        .slide-right {
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            border-radius: 18px;
+            padding: 1rem;
+        }
+
+        .slide-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .slide-header h3,
+        .slide-right h3 {
+            margin: 0;
+            font-size: 1.05rem;
+        }
+
+        .slide-controls {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .slide-meta {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .preview {
+            min-height: 360px;
+            border-radius: 16px;
+            border: 1px dashed rgba(148, 163, 184, 0.22);
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            position: relative;
+            background:
+                linear-gradient(135deg, rgba(20, 184, 166, 0.08), rgba(15, 23, 42, 0.4));
+        }
+
+        .preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            background: #020617;
+        }
+
+        .preview-placeholder {
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .preview-feedback {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+            text-align: center;
+            background: rgba(2, 6, 23, 0.82);
+            backdrop-filter: blur(6px);
+        }
+
+        .preview-feedback.error {
+            background: rgba(69, 10, 10, 0.82);
+        }
+
+        .preview-feedback.cancelled {
+            background: rgba(30, 41, 59, 0.86);
+        }
+
+        .preview-feedback-content {
+            max-width: 240px;
+            display: grid;
+            gap: 0.75rem;
+            justify-items: center;
+        }
+
+        .preview-spinner {
+            width: 34px;
+            height: 34px;
+            border: 3px solid rgba(148, 163, 184, 0.28);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+
+        .preview-feedback-title {
+            font-weight: 600;
+        }
+
+        .preview-feedback-message {
+            color: var(--muted);
+            font-size: 0.92rem;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .preview-feedback.error .preview-feedback-message {
+            color: #fecaca;
+        }
+
+        .preview-feedback.cancelled .preview-feedback-message {
+            color: #cbd5e1;
+        }
+
+        .dropzone {
+            border: 1px dashed rgba(148, 163, 184, 0.3);
+            border-radius: 16px;
+            padding: 0.85rem;
+            background: rgba(2, 6, 23, 0.45);
+        }
+
+        .dropzone.dragover {
+            border-color: rgba(20, 184, 166, 0.8);
+            background: rgba(20, 184, 166, 0.08);
+        }
+
+        .dropzone-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        .thumb-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .thumb {
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 14px;
+            overflow: hidden;
+            background: rgba(15, 23, 42, 0.7);
+        }
+
+        .thumb-preview {
+            width: 100%;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.7));
+            display: block;
+        }
+
+        .thumb-preview:hover {
+            transform: none;
+            border-color: transparent;
+        }
+
+        .thumb-preview img {
+            display: block;
+            width: 100%;
+            height: 110px;
+            object-fit: contain;
+            background: rgba(15, 23, 42, 0.92);
+        }
+
+        .thumb-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.4rem;
+            padding: 0.55rem;
+        }
+
+        .thumb-footer span {
+            font-size: 0.78rem;
+            color: var(--muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .hidden-input {
+            display: none;
+        }
+
+        .empty-state {
+            padding: 2rem;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .slides-footer {
+            display: flex;
+            justify-content: center;
+        }
+
+        .image-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background: rgba(2, 6, 23, 0.84);
+            backdrop-filter: blur(6px);
+        }
+
+        .image-modal-card {
+            width: min(100%, 1080px);
+            max-height: calc(100vh - 4rem);
+            display: grid;
+            gap: 1rem;
+            background: rgba(15, 23, 42, 0.98);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 18px;
+            padding: 1rem;
+            box-shadow: var(--shadow);
+        }
+
+        .image-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .image-modal-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .image-modal-body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 240px;
+            max-height: calc(100vh - 10rem);
+            overflow: auto;
+            border-radius: 14px;
+            background: rgba(2, 6, 23, 0.95);
+        }
+
+        .image-modal-body img {
+            display: block;
+            width: auto;
+            max-width: 100%;
+            height: auto;
+            max-height: calc(100vh - 11rem);
+            object-fit: contain;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 1080px) {
+            .page {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+                height: auto;
+                border-right: 0;
+                border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+            }
+
+            .settings-grid,
+            .slide-card {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <aside class="sidebar">
+            <div class="brand">
+                <div>
+                    <h1>Carousel Gen</h1>
+                    <p>Gemini image carousel builder</p>
+                </div>
+                <button id="new-project-btn" class="primary" type="button">New</button>
+            </div>
+            <div id="project-list" class="project-list"></div>
+        </aside>
+
+        <main class="content">
+            <div class="topbar">
+                <div>
+                    <h2 id="project-title">No project selected</h2>
+                    <div id="project-meta" class="status"></div>
+                </div>
+                <div id="status" class="status"></div>
+            </div>
+
+            <div id="app-root"></div>
+        </main>
+    </div>
+
+    <script>
+        const state = {
+            projects: [],
+            currentProject: null,
+        };
+        const uiState = {
+            slideFeedback: {},
+            generationControllers: {},
+            imageModal: null,
+        };
+
+        const aspectOptions = ["1:1", "4:5", "9:16", "16:9", "21:9", "3:4"];
+        const resolutionOptions = ["1K", "2K", "4K"];
+
+        const projectListEl = document.getElementById("project-list");
+        const appRootEl = document.getElementById("app-root");
+        const projectTitleEl = document.getElementById("project-title");
+        const projectMetaEl = document.getElementById("project-meta");
+        const statusEl = document.getElementById("status");
+        const newProjectBtn = document.getElementById("new-project-btn");
+
+        function setStatus(message = "", isError = false) {
+            statusEl.textContent = message;
+            statusEl.classList.toggle("error", Boolean(isError));
+        }
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, options);
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (error) {
+                data = {};
+            }
+
+            if (!response.ok) {
+                throw new Error(data.error || `Request failed: ${response.status}`);
+            }
+
+            return data;
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = "auto";
+            textarea.style.height = `${textarea.scrollHeight}px`;
+        }
+
+        function bindAutoResize(root = document) {
+            root.querySelectorAll("textarea").forEach((textarea) => {
+                autoResizeTextarea(textarea);
+                textarea.addEventListener("input", () => autoResizeTextarea(textarea));
+            });
+        }
+
+        function projectImageUrl(projectName, filename) {
+            return `/projects/${projectName}/${filename}?t=${Date.now()}`;
+        }
+
+        function getSlideEffectiveFixedText(slide) {
+            return slide.fixed_text_prompt_override !== null
+                ? slide.fixed_text_prompt_override
+                : state.currentProject.fixed_text_prompt;
+        }
+
+        function getSlideFeedback(slideIndex) {
+            return uiState.slideFeedback[String(slideIndex)] || null;
+        }
+
+        function getGenerationController(slideIndex) {
+            return uiState.generationControllers[String(slideIndex)] || null;
+        }
+
+        function setSlideFeedback(slideIndex, feedback) {
+            uiState.slideFeedback[String(slideIndex)] = feedback;
+        }
+
+        function clearSlideFeedback(slideIndex) {
+            delete uiState.slideFeedback[String(slideIndex)];
+        }
+
+        function setGenerationController(slideIndex, controller) {
+            uiState.generationControllers[String(slideIndex)] = controller;
+        }
+
+        function clearGenerationController(slideIndex) {
+            delete uiState.generationControllers[String(slideIndex)];
+        }
+
+        function isSlideBusy(slideIndex) {
+            return Boolean(getGenerationController(slideIndex));
+        }
+
+        function renderPreview(slide) {
+            const feedback = getSlideFeedback(slide.index);
+            const hasImage = slide.generated && slide.preview_url;
+
+            let inner = hasImage
+                ? `<img src="${slide.preview_url}" alt="Slide ${slide.index} preview">`
+                : '<div class="slide-meta preview-placeholder">Generate this slide to preview the output.</div>';
+
+            if (feedback?.state === "loading") {
+                inner += `
+                    <div class="preview-feedback">
+                        <div class="preview-feedback-content">
+                            <div class="preview-spinner" aria-hidden="true"></div>
+                            <div class="preview-feedback-title">${escapeHtml(feedback.title || "Generating image")}</div>
+                            <div class="preview-feedback-message">${escapeHtml(feedback.message || "Please wait...")}</div>
+                            <button type="button" class="subtle" data-cancel-generation="${slide.index}">Cancel</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (feedback?.state === "error") {
+                inner += `
+                    <div class="preview-feedback error">
+                        <div class="preview-feedback-content">
+                            <div class="preview-feedback-title">${escapeHtml(feedback.title || "Generation failed")}</div>
+                            <div class="preview-feedback-message">${escapeHtml(feedback.message || "Something went wrong.")}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (feedback?.state === "cancelled") {
+                inner += `
+                    <div class="preview-feedback cancelled">
+                        <div class="preview-feedback-content">
+                            <div class="preview-feedback-title">${escapeHtml(feedback.title || "Generation cancelled")}</div>
+                            <div class="preview-feedback-message">${escapeHtml(feedback.message || "The request was cancelled.")}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return inner;
+        }
+
+        function openImageModal(src, filename) {
+            uiState.imageModal = {src, filename};
+            renderApp();
+        }
+
+        function closeImageModal() {
+            uiState.imageModal = null;
+            renderApp();
+        }
+
+        function renderImageModal() {
+            if (!uiState.imageModal) {
+                return "";
+            }
+
+            return `
+                <div class="image-modal" id="image-modal-overlay">
+                    <div class="image-modal-card">
+                        <div class="image-modal-header">
+                            <h3>${escapeHtml(uiState.imageModal.filename || "Image preview")}</h3>
+                            <button type="button" class="subtle" id="close-image-modal-btn">Close</button>
+                        </div>
+                        <div class="image-modal-body">
+                            <img src="${uiState.imageModal.src}" alt="${escapeHtml(uiState.imageModal.filename || "Image preview")}">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadProjects(selectProjectName = null) {
+            const data = await fetchJson("/api/projects");
+            state.projects = data.projects || [];
+            renderProjectList();
+
+            if (selectProjectName) {
+                await loadProject(selectProjectName);
+                return;
+            }
+
+            if (!state.currentProject && state.projects.length > 0) {
+                await loadProject(state.projects[0].name);
+            } else if (!state.currentProject) {
+                renderApp();
+            } else {
+                renderProjectList();
+            }
+        }
+
+        async function loadProject(name) {
+            setStatus("Loading project...");
+            const data = await fetchJson(`/api/projects/${encodeURIComponent(name)}`);
+            state.currentProject = data.project;
+            renderProjectList();
+            renderApp();
+            setStatus("");
+        }
+
+        function renderProjectList() {
+            if (state.projects.length === 0) {
+                projectListEl.innerHTML = '<div class="empty-state">No projects yet. Create one to start generating slides.</div>';
+                return;
+            }
+
+            projectListEl.innerHTML = state.projects.map((project) => `
+                <button
+                    class="project-item ${state.currentProject?.name === project.name ? "active" : ""}"
+                    type="button"
+                    data-project-name="${escapeHtml(project.name)}"
+                >
+                    ${escapeHtml(project.name)}
+                    <small>${project.page_count} slides</small>
+                </button>
+            `).join("");
+
+            projectListEl.querySelectorAll("[data-project-name]").forEach((button) => {
+                button.addEventListener("click", () => loadProject(button.dataset.projectName));
+            });
+        }
+
+        function renderImageThumbs(filenames, target, slideIndex = null) {
+            if (!filenames || filenames.length === 0) {
+                return '<div class="slide-meta">No reference images yet.</div>';
+            }
+
+            return filenames.map((filename) => `
+                <div class="thumb">
+                    <button
+                        type="button"
+                        class="thumb-preview"
+                        data-open-image-modal="${escapeHtml(filename)}"
+                        data-image-src="${projectImageUrl(state.currentProject.name, filename)}"
+                    >
+                        <img src="${projectImageUrl(state.currentProject.name, filename)}" alt="${escapeHtml(filename)}">
+                    </button>
+                    <div class="thumb-footer">
+                        <span>${escapeHtml(filename)}</span>
+                        <button
+                            type="button"
+                            class="danger"
+                            data-delete-image="${escapeHtml(filename)}"
+                            data-target="${escapeHtml(target)}"
+                            ${slideIndex ? `data-slide-index="${slideIndex}"` : ""}
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        function renderSettings() {
+            const project = state.currentProject;
+            return `
+                <section class="panel settings">
+                    <div class="settings-grid">
+                        <div class="field">
+                            <label for="aspect-ratio">Aspect Ratio</label>
+                            <select id="aspect-ratio">
+                                ${aspectOptions.map((option) => `
+                                    <option value="${option}" ${project.aspect_ratio === option ? "selected" : ""}>${option}</option>
+                                `).join("")}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="resolution">Resolution</label>
+                            <select id="resolution">
+                                ${resolutionOptions.map((option) => `
+                                    <option value="${option}" ${project.resolution === option ? "selected" : ""}>${option}</option>
+                                `).join("")}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="page-count">Pages</label>
+                            <input id="page-count" type="number" min="1" max="50" value="${project.page_count}">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="fixed-text-prompt">Fixed Text Prompt</label>
+                        <textarea id="fixed-text-prompt" placeholder="Default text appended to every slide prompt">${escapeHtml(project.fixed_text_prompt || "")}</textarea>
+                    </div>
+
+                    <div class="dropzone" id="fixed-images-dropzone" data-target="fixed">
+                        <div class="dropzone-header">
+                            <span>Fixed Images: click, paste, or drag files here</span>
+                            <div>
+                                <button class="subtle" type="button" id="fixed-images-add-btn">Add Images</button>
+                                <input class="hidden-input" id="fixed-images-input" type="file" accept="image/*" multiple>
+                            </div>
+                        </div>
+                        <div class="thumb-grid">
+                            ${renderImageThumbs(project.fixed_images, "fixed")}
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <button class="primary" type="button" id="update-settings-btn">Update Settings</button>
+                        <button type="button" id="generate-all-btn">Generate All</button>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderSlides() {
+            const project = state.currentProject;
+            return `
+                <section class="slides">
+                    ${project.slides.map((slide) => `
+                        <article class="panel slide-card">
+                            <div class="slide-left">
+                                <div class="slide-header">
+                                    <h3>Slide ${slide.index}</h3>
+                                    <div class="slide-controls">
+                                        <div class="slide-meta">${slide.generated ? "Generated" : "Not generated"}</div>
+                                        <button
+                                            type="button"
+                                            class="subtle"
+                                            data-add-slide-above="${slide.index}"
+                                        >
+                                            Add Slide Above
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="danger"
+                                            data-delete-slide="${slide.index}"
+                                            ${project.slides.length <= 1 ? "disabled" : ""}
+                                        >
+                                            Delete Slide
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="field">
+                                    <label for="slide-prompt-${slide.index}">Slide Prompt</label>
+                                    <textarea
+                                        id="slide-prompt-${slide.index}"
+                                        data-slide-field="prompt"
+                                        data-slide-index="${slide.index}"
+                                        placeholder="Describe the slide you want Gemini to generate"
+                                    >${escapeHtml(slide.prompt || "")}</textarea>
+                                </div>
+
+                                <div class="field" style="margin-top: 0.9rem;">
+                                    <label for="slide-fixed-text-${slide.index}">Fixed Text For This Slide</label>
+                                    <div class="actions" style="margin: 0 0 0.45rem 0;">
+                                        <button
+                                            type="button"
+                                            class="subtle"
+                                            data-reset-fixed-text="${slide.index}"
+                                        >
+                                            Reset To Default
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        id="slide-fixed-text-${slide.index}"
+                                        data-slide-field="fixed_text_prompt_override"
+                                        data-slide-index="${slide.index}"
+                                        placeholder="Optional slide-level override"
+                                    >${escapeHtml(getSlideEffectiveFixedText(slide))}</textarea>
+                                </div>
+
+                                <div class="dropzone" style="margin-top: 0.9rem;" data-target="slide" data-slide-index="${slide.index}">
+                                    <div class="dropzone-header">
+                                        <span>Slide Images: click, paste, or drag files here</span>
+                                        <div>
+                                            <button class="subtle" type="button" data-open-slide-input="${slide.index}">Add Images</button>
+                                            <input class="hidden-input" id="slide-images-input-${slide.index}" type="file" accept="image/*" multiple>
+                                        </div>
+                                    </div>
+                                    <div class="thumb-grid">
+                                        ${renderImageThumbs(slide.images, "slide", slide.index)}
+                                    </div>
+                                </div>
+
+                                <div class="actions">
+                                    <button
+                                        class="primary"
+                                        type="button"
+                                        data-generate-slide="${slide.index}"
+                                        ${isSlideBusy(slide.index) ? "disabled" : ""}
+                                    >
+                                        Generate
+                                    </button>
+                                    <button
+                                        type="button"
+                                        data-update-slide="${slide.index}"
+                                        ${slide.generated && !isSlideBusy(slide.index) ? "" : "disabled"}
+                                    >
+                                        Update
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="slide-right">
+                                <div class="slide-header">
+                                    <h3>Preview</h3>
+                                    <div class="slide-meta">${slide.filename}</div>
+                                </div>
+                                <div class="preview">
+                                    ${renderPreview(slide)}
+                                </div>
+                            </div>
+                        </article>
+                    `).join("")}
+                    <div class="slides-footer">
+                        <button class="subtle" type="button" id="append-slide-btn">Add Slide</button>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderApp() {
+            if (!state.currentProject) {
+                projectTitleEl.textContent = "No project selected";
+                projectMetaEl.textContent = "Create a project to start authoring prompts and generating slides.";
+                appRootEl.innerHTML = `
+                    <div class="panel empty-state">
+                        <p>Create a project from the sidebar to start building a carousel.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            projectTitleEl.textContent = state.currentProject.name;
+            projectMetaEl.textContent = `Updated ${state.currentProject.updated_at}`;
+            appRootEl.innerHTML = `${renderSettings()}${renderSlides()}${renderImageModal()}`;
+            bindAutoResize(appRootEl);
+            bindProjectInputs();
+            bindImageActions();
+            bindSlideActions();
+            bindModalActions();
+        }
+
+        function bindProjectInputs() {
+            const aspectRatioEl = document.getElementById("aspect-ratio");
+            const resolutionEl = document.getElementById("resolution");
+            const pageCountEl = document.getElementById("page-count");
+            const fixedTextEl = document.getElementById("fixed-text-prompt");
+            const updateSettingsBtn = document.getElementById("update-settings-btn");
+            const generateAllBtn = document.getElementById("generate-all-btn");
+
+            aspectRatioEl.addEventListener("change", () => {
+                state.currentProject.aspect_ratio = aspectRatioEl.value;
+            });
+
+            resolutionEl.addEventListener("change", () => {
+                state.currentProject.resolution = resolutionEl.value;
+            });
+
+            pageCountEl.addEventListener("input", () => {
+                const value = Number(pageCountEl.value || state.currentProject.page_count || 1);
+                state.currentProject.page_count = Math.max(1, Math.min(50, value));
+            });
+
+            fixedTextEl.addEventListener("input", () => {
+                state.currentProject.fixed_text_prompt = fixedTextEl.value;
+            });
+
+            fixedTextEl.addEventListener("paste", async (event) => {
+                const imageFile = getImageFileFromClipboard(event);
+                if (!imageFile) {
+                    return;
+                }
+
+                event.preventDefault();
+                state.currentProject.fixed_text_prompt = fixedTextEl.value;
+                await uploadImages([imageFile], "fixed");
+            });
+
+            updateSettingsBtn.addEventListener("click", () => saveProject(true, "Settings updated."));
+            generateAllBtn.addEventListener("click", () => generateAllSlides());
+        }
+
+        function bindSlideActions() {
+            appRootEl.querySelectorAll("[data-slide-field='prompt']").forEach((textarea) => {
+                textarea.addEventListener("input", () => {
+                    const slide = state.currentProject.slides[Number(textarea.dataset.slideIndex) - 1];
+                    slide.prompt = textarea.value;
+                });
+
+                textarea.addEventListener("paste", async (event) => {
+                    const imageFile = getImageFileFromClipboard(event);
+                    if (!imageFile) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const slideIndex = Number(textarea.dataset.slideIndex);
+                    state.currentProject.slides[slideIndex - 1].prompt = textarea.value;
+                    await uploadImages([imageFile], "slide", slideIndex);
+                });
+            });
+
+            appRootEl.querySelectorAll("[data-slide-field='fixed_text_prompt_override']").forEach((textarea) => {
+                textarea.addEventListener("input", () => {
+                    const slide = state.currentProject.slides[Number(textarea.dataset.slideIndex) - 1];
+                    slide.fixed_text_prompt_override = textarea.value;
+                });
+            });
+
+            appRootEl.querySelectorAll("[data-reset-fixed-text]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    const slide = state.currentProject.slides[Number(button.dataset.resetFixedText) - 1];
+                    slide.fixed_text_prompt_override = null;
+                    renderApp();
+                });
+            });
+
+            appRootEl.querySelectorAll("[data-generate-slide]").forEach((button) => {
+                button.addEventListener("click", () => generateSlide(Number(button.dataset.generateSlide)));
+            });
+
+            appRootEl.querySelectorAll("[data-update-slide]").forEach((button) => {
+                button.addEventListener("click", () => updateSlide(Number(button.dataset.updateSlide)));
+            });
+
+            appRootEl.querySelectorAll("[data-cancel-generation]").forEach((button) => {
+                button.addEventListener("click", () => cancelGeneration(Number(button.dataset.cancelGeneration)));
+            });
+
+            appRootEl.querySelectorAll("[data-add-slide-above]").forEach((button) => {
+                button.addEventListener("click", () => addSlideAbove(Number(button.dataset.addSlideAbove)));
+            });
+
+            appRootEl.querySelectorAll("[data-delete-slide]").forEach((button) => {
+                button.addEventListener("click", () => deleteSlideAt(Number(button.dataset.deleteSlide)));
+            });
+
+            const appendSlideBtn = document.getElementById("append-slide-btn");
+            if (appendSlideBtn) {
+                appendSlideBtn.addEventListener("click", () => appendSlide());
+            }
+        }
+
+        function bindModalActions() {
+            appRootEl.querySelectorAll("[data-open-image-modal]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    openImageModal(button.dataset.imageSrc, button.dataset.openImageModal);
+                });
+            });
+
+            const closeBtn = document.getElementById("close-image-modal-btn");
+            if (closeBtn) {
+                closeBtn.addEventListener("click", () => closeImageModal());
+            }
+
+            const overlay = document.getElementById("image-modal-overlay");
+            if (overlay) {
+                overlay.addEventListener("click", (event) => {
+                    if (event.target === overlay) {
+                        closeImageModal();
+                    }
+                });
+            }
+        }
+
+        function bindImageActions() {
+            const fixedInput = document.getElementById("fixed-images-input");
+            document.getElementById("fixed-images-add-btn").addEventListener("click", () => fixedInput.click());
+            fixedInput.addEventListener("change", async () => {
+                await uploadImages(Array.from(fixedInput.files || []), "fixed");
+                fixedInput.value = "";
+            });
+
+            appRootEl.querySelectorAll("[data-open-slide-input]").forEach((button) => {
+                const slideIndex = Number(button.dataset.openSlideInput);
+                const input = document.getElementById(`slide-images-input-${slideIndex}`);
+                button.addEventListener("click", () => input.click());
+                input.addEventListener("change", async () => {
+                    await uploadImages(Array.from(input.files || []), "slide", slideIndex);
+                    input.value = "";
+                });
+            });
+
+            appRootEl.querySelectorAll(".dropzone").forEach((dropzone) => {
+                dropzone.addEventListener("dragover", (event) => {
+                    event.preventDefault();
+                    dropzone.classList.add("dragover");
+                });
+                dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+                dropzone.addEventListener("drop", async (event) => {
+                    event.preventDefault();
+                    dropzone.classList.remove("dragover");
+                    const files = Array.from(event.dataTransfer?.files || []).filter((file) => file.type.startsWith("image/"));
+                    if (files.length === 0) {
+                        return;
+                    }
+
+                    const target = dropzone.dataset.target;
+                    const slideIndex = dropzone.dataset.slideIndex ? Number(dropzone.dataset.slideIndex) : null;
+                    await uploadImages(files, target, slideIndex);
+                });
+
+                dropzone.addEventListener("paste", async (event) => {
+                    const imageFile = getImageFileFromClipboard(event);
+                    if (!imageFile) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const target = dropzone.dataset.target;
+                    const slideIndex = dropzone.dataset.slideIndex ? Number(dropzone.dataset.slideIndex) : null;
+                    await uploadImages([imageFile], target, slideIndex);
+                });
+            });
+
+            appRootEl.querySelectorAll("[data-delete-image]").forEach((button) => {
+                button.addEventListener("click", async () => {
+                    const filename = button.dataset.deleteImage;
+                    await deleteImage(filename);
+                });
+            });
+        }
+
+        function getImageFileFromClipboard(event) {
+            const items = Array.from(event.clipboardData?.items || []);
+            for (const item of items) {
+                if (item.type.startsWith("image/")) {
+                    return item.getAsFile();
+                }
+            }
+            return null;
+        }
+
+        function syncDraftFromDom() {
+            if (!state.currentProject) {
+                return;
+            }
+
+            const aspectRatioEl = document.getElementById("aspect-ratio");
+            const resolutionEl = document.getElementById("resolution");
+            const pageCountEl = document.getElementById("page-count");
+            const fixedTextEl = document.getElementById("fixed-text-prompt");
+
+            if (aspectRatioEl) {
+                state.currentProject.aspect_ratio = aspectRatioEl.value;
+            }
+            if (resolutionEl) {
+                state.currentProject.resolution = resolutionEl.value;
+            }
+            if (pageCountEl) {
+                const value = Number(pageCountEl.value || state.currentProject.page_count || 1);
+                state.currentProject.page_count = Math.max(1, Math.min(50, value));
+            }
+            if (fixedTextEl) {
+                state.currentProject.fixed_text_prompt = fixedTextEl.value;
+            }
+
+            state.currentProject.slides.forEach((slide, index) => {
+                const promptEl = document.getElementById(`slide-prompt-${index + 1}`);
+                const fixedTextOverrideEl = document.getElementById(`slide-fixed-text-${index + 1}`);
+
+                if (promptEl) {
+                    slide.prompt = promptEl.value;
+                }
+                if (fixedTextOverrideEl) {
+                    slide.fixed_text_prompt_override = fixedTextOverrideEl.value;
+                }
+            });
+        }
+
+        function createEmptySlide() {
+            return {
+                index: state.currentProject.slides.length + 1,
+                prompt: "",
+                fixed_text_prompt_override: null,
+                images: [],
+                generated: false,
+                filename: "",
+            };
+        }
+
+        function reindexLocalSlides() {
+            state.currentProject.slides.forEach((slide, index) => {
+                slide.index = index + 1;
+            });
+            state.currentProject.page_count = state.currentProject.slides.length;
+        }
+
+        function applyPendingPageCountToSlides() {
+            const rawCount = Number(state.currentProject.page_count || state.currentProject.slides.length || 1);
+            const targetCount = Math.max(1, Math.min(50, rawCount));
+            state.currentProject.page_count = targetCount;
+
+            while (state.currentProject.slides.length < targetCount) {
+                state.currentProject.slides.push(createEmptySlide());
+            }
+
+            if (state.currentProject.slides.length > targetCount) {
+                state.currentProject.slides = state.currentProject.slides.slice(0, targetCount);
+            }
+
+            reindexLocalSlides();
+        }
+
+        function buildProjectPayload() {
+            return {
+                aspect_ratio: state.currentProject.aspect_ratio,
+                resolution: state.currentProject.resolution,
+                fixed_text_prompt: state.currentProject.fixed_text_prompt,
+                page_count: Number(state.currentProject.page_count || state.currentProject.slides.length || 1),
+                slides: state.currentProject.slides.map((slide, index) => ({
+                    index: index + 1,
+                    prompt: slide.prompt || "",
+                    fixed_text_prompt_override: slide.fixed_text_prompt_override,
+                    images: slide.images || [],
+                    generated: Boolean(slide.generated),
+                    filename: slide.filename || `s${index + 1}.png`,
+                })),
+            };
+        }
+
+        async function saveProject(showMessage = true, successMessage = "Project saved.") {
+            if (!state.currentProject) {
+                return;
+            }
+
+            syncDraftFromDom();
+            applyPendingPageCountToSlides();
+            setStatus("Saving project...");
+            const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}`, {
+                method: "PUT",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(buildProjectPayload()),
+            });
+            state.currentProject = data.project;
+            renderApp();
+            await loadProjects(state.currentProject.name);
+            if (showMessage) {
+                setStatus(successMessage);
+            } else {
+                setStatus("");
+            }
+        }
+
+        async function persistSlideStructure(successMessage) {
+            reindexLocalSlides();
+            renderApp();
+            await saveProject(false);
+            setStatus(successMessage);
+        }
+
+        async function insertSlideAt(insertBeforeIndex, successMessage) {
+            if (!state.currentProject) {
+                return;
+            }
+
+            syncDraftFromDom();
+            await saveProject(false);
+            setStatus("Adding slide...");
+            const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}/slides/insert`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({insert_before_index: insertBeforeIndex}),
+            });
+            state.currentProject = data.project;
+            renderApp();
+            await loadProjects(state.currentProject.name);
+            setStatus(successMessage);
+        }
+
+        async function addSlideAbove(slideIndex) {
+            await insertSlideAt(slideIndex, `Added a new slide above slide ${slideIndex}.`);
+        }
+
+        async function deleteSlideAt(slideIndex) {
+            if (state.currentProject.slides.length <= 1) {
+                setStatus("At least one slide is required.", true);
+                return;
+            }
+
+            state.currentProject.slides.splice(slideIndex - 1, 1);
+            await persistSlideStructure(`Deleted slide ${slideIndex}.`);
+        }
+
+        async function appendSlide() {
+            const insertBeforeIndex = state.currentProject.slides.length + 1;
+            await insertSlideAt(insertBeforeIndex, "Added a new slide at the bottom.");
+        }
+
+        async function uploadImages(files, target, slideIndex = null) {
+            if (!files || files.length === 0) {
+                return;
+            }
+
+            syncDraftFromDom();
+            await saveProject(false);
+            setStatus("Uploading image assets...");
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append("image", file);
+                formData.append("target", target);
+                if (slideIndex !== null && slideIndex !== undefined) {
+                    formData.append("slide_index", String(slideIndex));
+                }
+
+                const response = await fetch(`/api/projects/${encodeURIComponent(state.currentProject.name)}/upload-image`, {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || "Image upload failed.");
+                }
+                state.currentProject = data.project;
+            }
+
+            renderApp();
+            await loadProjects(state.currentProject.name);
+            setStatus("Image uploaded.");
+        }
+
+        async function deleteImage(filename) {
+            if (!filename) {
+                return;
+            }
+
+            setStatus(`Deleting ${filename}...`);
+            const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}/delete-image/${encodeURIComponent(filename)}`, {
+                method: "DELETE",
+            });
+            state.currentProject = data.project;
+            renderApp();
+            setStatus("Image deleted.");
+        }
+
+        function cancelGeneration(slideIndex) {
+            const controller = getGenerationController(slideIndex);
+            if (!controller) {
+                return;
+            }
+
+            controller.abort();
+            clearGenerationController(slideIndex);
+            setSlideFeedback(slideIndex, {
+                state: "cancelled",
+                title: "Generation cancelled",
+                message: "The image request was cancelled.",
+            });
+            renderApp();
+            setStatus(`Cancelled generation for slide ${slideIndex}.`);
+        }
+
+        async function generateSlide(slideIndex) {
+            try {
+                if (isSlideBusy(slideIndex)) {
+                    return;
+                }
+                setSlideFeedback(slideIndex, {
+                    state: "loading",
+                    title: "Generating image",
+                    message: "Gemini is creating this slide...",
+                });
+                renderApp();
+                await saveProject(false);
+                setStatus(`Generating slide ${slideIndex}...`);
+                const controller = new AbortController();
+                setGenerationController(slideIndex, controller);
+                const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}/generate/${slideIndex}`, {
+                    method: "POST",
+                    signal: controller.signal,
+                });
+                state.currentProject = data.project;
+                clearGenerationController(slideIndex);
+                clearSlideFeedback(slideIndex);
+                renderApp();
+                await loadProjects(state.currentProject.name);
+                setStatus(`Slide ${slideIndex} generated.`);
+            } catch (error) {
+                clearGenerationController(slideIndex);
+                if (error?.name === "AbortError") {
+                    setSlideFeedback(slideIndex, {
+                        state: "cancelled",
+                        title: "Generation cancelled",
+                        message: "The image request was cancelled.",
+                    });
+                    renderApp();
+                    setStatus(`Cancelled generation for slide ${slideIndex}.`);
+                    return;
+                }
+                setSlideFeedback(slideIndex, {
+                    state: "error",
+                    title: "Generate failed",
+                    message: error.message || "Something went wrong while generating this slide.",
+                });
+                renderApp();
+                setStatus(error.message || "Slide generation failed.", true);
+            }
+        }
+
+        async function updateSlide(slideIndex) {
+            try {
+                if (isSlideBusy(slideIndex)) {
+                    return;
+                }
+                setSlideFeedback(slideIndex, {
+                    state: "loading",
+                    title: "Updating image",
+                    message: "Gemini is refining this slide...",
+                });
+                renderApp();
+                await saveProject(false);
+                setStatus(`Updating slide ${slideIndex}...`);
+                const controller = new AbortController();
+                setGenerationController(slideIndex, controller);
+                const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}/update/${slideIndex}`, {
+                    method: "POST",
+                    signal: controller.signal,
+                });
+                state.currentProject = data.project;
+                clearGenerationController(slideIndex);
+                clearSlideFeedback(slideIndex);
+                renderApp();
+                await loadProjects(state.currentProject.name);
+                setStatus(`Slide ${slideIndex} updated.`);
+            } catch (error) {
+                clearGenerationController(slideIndex);
+                if (error?.name === "AbortError") {
+                    setSlideFeedback(slideIndex, {
+                        state: "cancelled",
+                        title: "Update cancelled",
+                        message: "The image update request was cancelled.",
+                    });
+                    renderApp();
+                    setStatus(`Cancelled update for slide ${slideIndex}.`);
+                    return;
+                }
+                setSlideFeedback(slideIndex, {
+                    state: "error",
+                    title: "Update failed",
+                    message: error.message || "Something went wrong while updating this slide.",
+                });
+                renderApp();
+                setStatus(error.message || "Slide update failed.", true);
+            }
+        }
+
+        async function generateAllSlides() {
+            await saveProject(false);
+            setStatus("Generating all slides sequentially...");
+            const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}/generate-all`, {
+                method: "POST",
+            });
+            state.currentProject = data.project;
+            renderApp();
+            await loadProjects(state.currentProject.name);
+            setStatus("All slides generated.");
+        }
+
+        async function createProject() {
+            const rawName = window.prompt("Project name");
+            if (!rawName) {
+                return;
+            }
+
+            const pages = window.prompt("How many slides?", "5");
+            setStatus("Creating project...");
+            const data = await fetchJson("/api/projects", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    name: rawName,
+                    page_count: Number(pages || 5),
+                    aspect_ratio: "1:1",
+                    resolution: "1K",
+                    fixed_text_prompt: "",
+                }),
+            });
+
+            state.currentProject = data.project;
+            await loadProjects(state.currentProject.name);
+            setStatus("Project created.");
+        }
+
+        newProjectBtn.addEventListener("click", async () => {
+            try {
+                await createProject();
+            } catch (error) {
+                setStatus(error.message, true);
+            }
+        });
+
+        window.addEventListener("error", (event) => {
+            setStatus(event.message, true);
+        });
+
+        window.addEventListener("unhandledrejection", (event) => {
+            setStatus(event.reason?.message || "Unexpected error.", true);
+        });
+
+        loadProjects().catch((error) => setStatus(error.message, true));
+    </script>
+</body>
+</html>

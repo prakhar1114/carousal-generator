@@ -1,0 +1,4 @@
+Flask
+google-genai
+Pillow
+python-dotenv
