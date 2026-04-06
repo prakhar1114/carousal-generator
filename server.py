@@ -5,6 +5,7 @@ import io
 import json
 import os
 import re
+import threading
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,12 +24,26 @@ DEFAULT_RESOLUTION = "1K"
 DEFAULT_PAGE_COUNT = 5
 ALLOWED_ASPECT_RATIOS = {"1:1", "4:5", "9:16", "16:9", "21:9", "3:4"}
 ALLOWED_RESOLUTIONS = {"1K", "2K", "4K"}
+BATCH_ACTIVE_STATES = {"queued", "running", "cancelling"}
+BATCH_TERMINAL_STATES = {"completed", "failed", "cancelled", "interrupted"}
+SLIDE_GENERATION_STATES = {
+    "idle",
+    "queued",
+    "running",
+    "completed",
+    "failed",
+    "cancelled",
+    "interrupted",
+}
 
 load_dotenv(BASE_DIR / ".env")
 PROJECTS_DIR.mkdir(exist_ok=True)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 30 * 1024 * 1024
+PROJECT_IO_LOCK = threading.RLock()
+JOB_REGISTRY_LOCK = threading.Lock()
+ACTIVE_BATCH_JOBS: dict[str, dict[str, Any]] = {}
 
 
 class ProjectError(ValueError):
@@ -37,6 +52,22 @@ class ProjectError(ValueError):
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def default_batch_generation(page_count: int) -> dict[str, Any]:
+    return {
+        "job_id": None,
+        "status": "idle",
+        "total_slides": coerce_page_count(page_count),
+        "processed_slides": 0,
+        "completed_slides": 0,
+        "failed_slides": 0,
+        "current_slide_index": None,
+        "started_at": None,
+        "finished_at": None,
+        "last_error": None,
+        "message": "",
+    }
 
 
 def slugify_project_name(raw_name: str) -> str:
@@ -81,6 +112,8 @@ def default_slide(index: int) -> dict[str, Any]:
         "images": [],
         "generated": False,
         "filename": f"s{index}.png",
+        "generation_status": "idle",
+        "generation_error": None,
     }
 
 
@@ -113,40 +146,107 @@ def create_project_payload(
         "fixed_text_prompt": str(fixed_text_prompt or ""),
         "fixed_images": [],
         "slides": [default_slide(i) for i in range(1, coerce_page_count(page_count) + 1)],
+        "batch_generation": default_batch_generation(page_count),
     }
 
 
 def save_project(project: dict[str, Any]) -> None:
-    name = slugify_project_name(project["name"])
-    folder = project_dir(name)
-    folder.mkdir(exist_ok=True)
-    project["updated_at"] = now_iso()
-    project_json_path(name).write_text(json.dumps(project, indent=2), encoding="utf-8")
+    with PROJECT_IO_LOCK:
+        name = slugify_project_name(project["name"])
+        folder = project_dir(name)
+        folder.mkdir(exist_ok=True)
+        project["updated_at"] = now_iso()
+        project_json_path(name).write_text(json.dumps(project, indent=2), encoding="utf-8")
+
+
+def get_runtime_job(project_name: str) -> dict[str, Any] | None:
+    with JOB_REGISTRY_LOCK:
+        return ACTIVE_BATCH_JOBS.get(slugify_project_name(project_name))
+
+
+def has_active_batch_job(project_name: str, job_id: str | None = None) -> bool:
+    runtime_job = get_runtime_job(project_name)
+    if not runtime_job:
+        return False
+    if job_id is not None and runtime_job["job_id"] != job_id:
+        return False
+    return runtime_job["status"] in BATCH_ACTIVE_STATES
+
+
+def normalize_slide_generation_state(raw_state: Any) -> str:
+    state = str(raw_state or "idle")
+    if state not in SLIDE_GENERATION_STATES:
+        return "idle"
+    return state
+
+
+def normalize_batch_generation(project: dict[str, Any]) -> dict[str, Any]:
+    slides = project.get("slides", [])
+    batch_generation_value = project.get("batch_generation")
+    raw_batch: dict[str, Any] = batch_generation_value if isinstance(batch_generation_value, dict) else {}
+    batch = default_batch_generation(max(1, len(slides) or DEFAULT_PAGE_COUNT))
+    batch.update(
+        {
+            "job_id": raw_batch.get("job_id"),
+            "status": str(raw_batch.get("status") or "idle"),
+            "processed_slides": int(raw_batch.get("processed_slides") or 0),
+            "completed_slides": int(raw_batch.get("completed_slides") or 0),
+            "failed_slides": int(raw_batch.get("failed_slides") or 0),
+            "current_slide_index": raw_batch.get("current_slide_index"),
+            "started_at": raw_batch.get("started_at"),
+            "finished_at": raw_batch.get("finished_at"),
+            "last_error": raw_batch.get("last_error"),
+            "message": str(raw_batch.get("message") or ""),
+        }
+    )
+    batch["total_slides"] = len(slides)
+    if batch["status"] not in {"idle", *BATCH_ACTIVE_STATES, *BATCH_TERMINAL_STATES}:
+        batch["status"] = "idle"
+
+    job_id = batch.get("job_id")
+    if batch["status"] in BATCH_ACTIVE_STATES and not has_active_batch_job(project["name"], job_id):
+        batch["status"] = "interrupted"
+        batch["finished_at"] = batch["finished_at"] or now_iso()
+        batch["current_slide_index"] = None
+        batch["message"] = "Background generation stopped because the Flask server restarted."
+        for slide in slides:
+            slide_status = normalize_slide_generation_state(slide.get("generation_status"))
+            if slide_status in BATCH_ACTIVE_STATES:
+                slide["generation_status"] = "interrupted"
+                slide["generation_error"] = slide.get("generation_error") or "Background generation stopped."
+
+    return batch
 
 
 def load_project(project_name: str) -> dict[str, Any]:
-    path = project_json_path(project_name)
-    if not path.exists():
-        raise FileNotFoundError(f"Project '{project_name}' does not exist.")
+    with PROJECT_IO_LOCK:
+        path = project_json_path(project_name)
+        if not path.exists():
+            raise FileNotFoundError(f"Project '{project_name}' does not exist.")
 
-    project = json.loads(path.read_text(encoding="utf-8"))
-    slides = project.get("slides", [])
-    normalized_slides = []
-    for index, slide in enumerate(slides, start=1):
-        normalized_slide = default_slide(index)
-        normalized_slide["prompt"] = str(slide.get("prompt", ""))
-        normalized_slide["fixed_text_prompt_override"] = slide.get("fixed_text_prompt_override")
-        normalized_slide["images"] = [str(image) for image in slide.get("images", [])]
-        normalized_slide["generated"] = bool(slide.get("generated", False))
-        normalized_slide["filename"] = str(slide.get("filename") or f"s{index}.png")
-        normalized_slides.append(normalized_slide)
+        project = json.loads(path.read_text(encoding="utf-8"))
+        slides = project.get("slides", [])
+        normalized_slides = []
+        for index, slide in enumerate(slides, start=1):
+            normalized_slide = default_slide(index)
+            normalized_slide["prompt"] = str(slide.get("prompt", ""))
+            normalized_slide["fixed_text_prompt_override"] = slide.get("fixed_text_prompt_override")
+            normalized_slide["images"] = [str(image) for image in slide.get("images", [])]
+            normalized_slide["generated"] = bool(slide.get("generated", False))
+            normalized_slide["filename"] = str(slide.get("filename") or f"s{index}.png")
+            normalized_slide["generation_status"] = normalize_slide_generation_state(
+                slide.get("generation_status")
+            )
+            normalized_slide["generation_error"] = slide.get("generation_error")
+            normalized_slides.append(normalized_slide)
 
-    project["slides"] = normalized_slides
-    project["fixed_images"] = [str(image) for image in project.get("fixed_images", [])]
-    project["fixed_text_prompt"] = str(project.get("fixed_text_prompt", ""))
-    project["aspect_ratio"] = validate_aspect_ratio(project.get("aspect_ratio", DEFAULT_ASPECT_RATIO))
-    project["resolution"] = validate_resolution(project.get("resolution", DEFAULT_RESOLUTION))
-    return project
+        project["slides"] = normalized_slides
+        project["fixed_images"] = [str(image) for image in project.get("fixed_images", [])]
+        project["fixed_text_prompt"] = str(project.get("fixed_text_prompt", ""))
+        project["aspect_ratio"] = validate_aspect_ratio(project.get("aspect_ratio", DEFAULT_ASPECT_RATIO))
+        project["resolution"] = validate_resolution(project.get("resolution", DEFAULT_RESOLUTION))
+        project["batch_generation"] = normalize_batch_generation(project)
+        return project
 
 
 def effective_fixed_text(project: dict[str, Any], slide: dict[str, Any]) -> str:
@@ -173,8 +273,15 @@ def sync_slide_count(project: dict[str, Any], page_count: int) -> None:
         slide.setdefault("images", [])
         slide.setdefault("generated", False)
         slide.setdefault("fixed_text_prompt_override", None)
+        slide["generation_status"] = normalize_slide_generation_state(slide.get("generation_status"))
+        slide.setdefault("generation_error", None)
 
     project["slides"] = current_slides
+    batch_generation = normalize_batch_generation(project)
+    batch_generation["total_slides"] = len(current_slides)
+    if batch_generation["status"] == "idle":
+        batch_generation["message"] = ""
+    project["batch_generation"] = batch_generation
 
 
 def slide_asset_names(project: dict[str, Any]) -> set[str]:
@@ -255,6 +362,7 @@ def resequence_slide_assets(project: dict[str, Any]) -> None:
 def serialize_project(project: dict[str, Any]) -> dict[str, Any]:
     payload = deepcopy(project)
     payload["page_count"] = len(payload.get("slides", []))
+    payload["batch_generation"] = normalize_batch_generation(payload)
     for slide in payload["slides"]:
         slide["effective_fixed_text"] = effective_fixed_text(project, slide)
         slide["preview_url"] = (
@@ -267,6 +375,180 @@ def serialize_project(project: dict[str, Any]) -> dict[str, Any]:
         for filename in payload.get("fixed_images", [])
     }
     return payload
+
+
+def ensure_batch_not_running(project_name: str) -> None:
+    runtime_job = get_runtime_job(project_name)
+    if runtime_job and runtime_job["status"] in BATCH_ACTIVE_STATES:
+        raise ProjectError("Background generation is already running for this project.")
+
+
+def set_slide_batch_state(
+    project: dict[str, Any],
+    slide_index: int,
+    state: str,
+    error_message: str | None = None,
+) -> None:
+    slide = get_slide(project, slide_index)
+    slide["generation_status"] = normalize_slide_generation_state(state)
+    slide["generation_error"] = error_message
+
+
+def initialize_batch_generation(project: dict[str, Any], job_id: str) -> None:
+    for slide in project.get("slides", []):
+        slide["generation_status"] = "queued"
+        slide["generation_error"] = None
+
+    project["batch_generation"] = {
+        "job_id": job_id,
+        "status": "queued",
+        "total_slides": len(project.get("slides", [])),
+        "processed_slides": 0,
+        "completed_slides": 0,
+        "failed_slides": 0,
+        "current_slide_index": None,
+        "started_at": now_iso(),
+        "finished_at": None,
+        "last_error": None,
+        "message": "Queued background generation.",
+    }
+
+
+def persist_batch_generation_update(
+    project_name: str,
+    updater,
+) -> dict[str, Any]:
+    project = load_project(project_name)
+    updater(project)
+    save_project(project)
+    return project
+
+
+def start_background_generation(project_name: str) -> dict[str, Any]:
+    project_name = slugify_project_name(project_name)
+    ensure_batch_not_running(project_name)
+    job_id = uuid4().hex
+    project = persist_batch_generation_update(
+        project_name,
+        lambda loaded_project: initialize_batch_generation(loaded_project, job_id),
+    )
+
+    cancel_event = threading.Event()
+    runtime_job = {
+        "job_id": job_id,
+        "project_name": project_name,
+        "status": "queued",
+        "cancel_event": cancel_event,
+        "thread": None,
+    }
+    worker = threading.Thread(
+        target=run_background_generation,
+        args=(project_name, job_id),
+        daemon=True,
+        name=f"carousel-batch-{project_name}",
+    )
+    runtime_job["thread"] = worker
+
+    with JOB_REGISTRY_LOCK:
+        ACTIVE_BATCH_JOBS[project_name] = runtime_job
+
+    worker.start()
+    return project
+
+
+def finalize_batch_generation(project_name: str, final_status: str, message: str, last_error: str | None = None) -> dict[str, Any]:
+    def apply_final_state(project: dict[str, Any]) -> None:
+        batch = normalize_batch_generation(project)
+        batch["status"] = final_status
+        batch["finished_at"] = now_iso()
+        batch["current_slide_index"] = None
+        batch["last_error"] = last_error
+        batch["message"] = message
+        project["batch_generation"] = batch
+        if final_status in {"cancelled", "interrupted"}:
+            for slide in project.get("slides", []):
+                if normalize_slide_generation_state(slide.get("generation_status")) == "queued":
+                    slide["generation_status"] = final_status
+                    slide["generation_error"] = slide.get("generation_error") or message
+
+    return persist_batch_generation_update(project_name, apply_final_state)
+
+
+def run_background_generation(project_name: str, job_id: str) -> None:
+    project_name = slugify_project_name(project_name)
+    runtime_job = get_runtime_job(project_name)
+    if not runtime_job or runtime_job["job_id"] != job_id:
+        return
+
+    runtime_job["status"] = "running"
+    project = load_project(project_name)
+    slide_indexes = [slide["index"] for slide in project.get("slides", [])]
+    failures = 0
+    last_error: str | None = None
+
+    try:
+        for position, slide_index in enumerate(slide_indexes, start=1):
+            runtime_job = get_runtime_job(project_name)
+            if not runtime_job or runtime_job["job_id"] != job_id:
+                return
+            cancel_event = runtime_job["cancel_event"]
+            if cancel_event.is_set():
+                finalize_batch_generation(
+                    project_name,
+                    "cancelled",
+                    "Background generation cancelled.",
+                    last_error=last_error,
+                )
+                return
+
+            def mark_running(loaded_project: dict[str, Any]) -> None:
+                batch = normalize_batch_generation(loaded_project)
+                batch["status"] = "running"
+                batch["current_slide_index"] = slide_index
+                batch["message"] = f"Generating slide {slide_index} of {len(slide_indexes)}..."
+                loaded_project["batch_generation"] = batch
+                set_slide_batch_state(loaded_project, slide_index, "running")
+
+            persist_batch_generation_update(project_name, mark_running)
+
+            try:
+                generate_slide_image(project_name, slide_index, include_existing_image=False)
+            except Exception as exc:  # noqa: BLE001
+                failures += 1
+                last_error = str(exc)
+
+                def mark_failed(loaded_project: dict[str, Any]) -> None:
+                    batch = normalize_batch_generation(loaded_project)
+                    batch["processed_slides"] = position
+                    batch["failed_slides"] = failures
+                    batch["last_error"] = last_error
+                    batch["message"] = f"Slide {slide_index} failed. Continuing..."
+                    loaded_project["batch_generation"] = batch
+                    set_slide_batch_state(loaded_project, slide_index, "failed", last_error)
+
+                persist_batch_generation_update(project_name, mark_failed)
+                continue
+
+            def mark_completed(loaded_project: dict[str, Any]) -> None:
+                batch = normalize_batch_generation(loaded_project)
+                batch["processed_slides"] = position
+                batch["completed_slides"] = batch.get("completed_slides", 0) + 1
+                batch["message"] = f"Completed slide {slide_index} of {len(slide_indexes)}."
+                loaded_project["batch_generation"] = batch
+                set_slide_batch_state(loaded_project, slide_index, "completed")
+
+            persist_batch_generation_update(project_name, mark_completed)
+
+        final_status = "failed" if failures else "completed"
+        final_message = (
+            "Background generation completed with errors."
+            if failures
+            else "All slides generated in the background."
+        )
+        finalize_batch_generation(project_name, final_status, final_message, last_error=last_error)
+    finally:
+        with JOB_REGISTRY_LOCK:
+            ACTIVE_BATCH_JOBS.pop(project_name, None)
 
 
 def get_slide(project: dict[str, Any], slide_index: int) -> dict[str, Any]:
@@ -511,6 +793,8 @@ def generate_slide_image(project_name: str, slide_index: int, include_existing_i
     output_path = project_dir(project_name) / slide["filename"]
     image.save(output_path)
     slide["generated"] = True
+    slide["generation_status"] = "completed"
+    slide["generation_error"] = None
     save_project(project)
 
     refreshed_project = load_project(project_name)
@@ -639,6 +923,7 @@ def get_project(project_name: str):
 
 @app.put("/api/projects/<project_name>")
 def update_project(project_name: str):
+    ensure_batch_not_running(project_name)
     payload = request.get_json(silent=True) or {}
     project = load_project(project_name)
     previous_project = deepcopy(project)
@@ -652,6 +937,7 @@ def update_project(project_name: str):
 
 @app.post("/api/projects/<project_name>/slides/insert")
 def insert_project_slide(project_name: str):
+    ensure_batch_not_running(project_name)
     payload = request.get_json(silent=True) or {}
     insert_before_index = payload.get("insert_before_index")
     if insert_before_index is None:
@@ -667,28 +953,68 @@ def insert_project_slide(project_name: str):
 
 @app.post("/api/projects/<project_name>/generate/<int:slide_index>")
 def generate_slide(project_name: str, slide_index: int):
+    ensure_batch_not_running(project_name)
     return jsonify(generate_slide_image(project_name, slide_index, include_existing_image=False))
 
 
 @app.post("/api/projects/<project_name>/update/<int:slide_index>")
 def update_slide(project_name: str, slide_index: int):
+    ensure_batch_not_running(project_name)
     return jsonify(generate_slide_image(project_name, slide_index, include_existing_image=True))
 
 
 @app.post("/api/projects/<project_name>/generate-all")
 def generate_all(project_name: str):
-    project = load_project(project_name)
-    results = []
-    for slide in project["slides"]:
-        result = generate_slide_image(project_name, slide["index"], include_existing_image=False)
-        results.append({"index": slide["index"], "preview_url": result["slide"]["preview_url"]})
+    project = start_background_generation(project_name)
+    return jsonify(
+        {
+            "project": serialize_project(project),
+            "accepted": True,
+            "message": "Background generation started.",
+        }
+    ), 202
 
-    refreshed = load_project(project_name)
-    return jsonify({"project": serialize_project(refreshed), "results": results})
+
+@app.get("/api/projects/<project_name>/generation-status")
+def generation_status(project_name: str):
+    project = load_project(project_name)
+    runtime_job = get_runtime_job(project_name)
+    return jsonify(
+        {
+            "project": serialize_project(project),
+            "active": bool(runtime_job and runtime_job["status"] in BATCH_ACTIVE_STATES),
+        }
+    )
+
+
+@app.post("/api/projects/<project_name>/generate-all/cancel")
+def cancel_generate_all(project_name: str):
+    runtime_job = get_runtime_job(project_name)
+    if not runtime_job or runtime_job["status"] not in BATCH_ACTIVE_STATES:
+        raise ProjectError("No background generation is currently running.")
+
+    runtime_job["status"] = "cancelling"
+    runtime_job["cancel_event"].set()
+
+    def mark_cancelling(project: dict[str, Any]) -> None:
+        batch = normalize_batch_generation(project)
+        batch["status"] = "cancelling"
+        batch["message"] = "Stopping after the current slide finishes..."
+        project["batch_generation"] = batch
+
+    project = persist_batch_generation_update(project_name, mark_cancelling)
+    return jsonify(
+        {
+            "project": serialize_project(project),
+            "accepted": True,
+            "message": "Background generation will stop after the current slide.",
+        }
+    )
 
 
 @app.post("/api/projects/<project_name>/upload-image")
 def upload_image(project_name: str):
+    ensure_batch_not_running(project_name)
     project = load_project(project_name)
     form_payload = request.form.to_dict()
     json_payload = request.get_json(silent=True) or {}
@@ -708,6 +1034,7 @@ def delete_image(project_name: str, filename: str):
     if "/" in filename or filename.startswith("."):
         abort(400)
 
+    ensure_batch_not_running(project_name)
     project = load_project(project_name)
     delete_asset(project, filename)
     refreshed = load_project(project_name)

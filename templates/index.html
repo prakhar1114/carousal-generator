@@ -225,6 +225,85 @@
             margin-top: 1rem;
         }
 
+        .generation-summary {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 16px;
+            border: 1px solid rgba(20, 184, 166, 0.2);
+            background: rgba(15, 23, 42, 0.55);
+        }
+
+        .generation-summary-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .generation-summary-title {
+            font-weight: 600;
+        }
+
+        .generation-summary-meta {
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 12px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: rgba(51, 65, 85, 0.75);
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            transition: width 180ms ease;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 88px;
+            padding: 0.28rem 0.6rem;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            font-size: 0.78rem;
+            text-transform: capitalize;
+            background: rgba(15, 23, 42, 0.85);
+            color: var(--muted);
+        }
+
+        .status-pill.running,
+        .status-pill.queued,
+        .status-pill.cancelling {
+            border-color: rgba(20, 184, 166, 0.35);
+            color: #99f6e4;
+        }
+
+        .status-pill.completed {
+            border-color: rgba(74, 222, 128, 0.35);
+            color: #bbf7d0;
+        }
+
+        .status-pill.failed,
+        .status-pill.interrupted {
+            border-color: rgba(239, 68, 68, 0.35);
+            color: #fecaca;
+        }
+
+        .status-pill.cancelled {
+            border-color: rgba(148, 163, 184, 0.35);
+            color: #cbd5e1;
+        }
+
         .slides {
             display: grid;
             gap: 1rem;
@@ -559,10 +638,13 @@
             slideFeedback: {},
             generationControllers: {},
             imageModal: null,
+            batchPollIntervalId: null,
+            batchPollRequestInFlight: false,
         };
 
         const aspectOptions = ["1:1", "4:5", "9:16", "16:9", "21:9", "3:4"];
         const resolutionOptions = ["1K", "2K", "4K"];
+        const batchActiveStates = new Set(["queued", "running", "cancelling"]);
 
         const projectListEl = document.getElementById("project-list");
         const appRootEl = document.getElementById("app-root");
@@ -574,6 +656,58 @@
         function setStatus(message = "", isError = false) {
             statusEl.textContent = message;
             statusEl.classList.toggle("error", Boolean(isError));
+        }
+
+        function getBatchGeneration() {
+            return state.currentProject?.batch_generation || null;
+        }
+
+        function isBatchBusy() {
+            const batch = getBatchGeneration();
+            return Boolean(batch && batchActiveStates.has(batch.status));
+        }
+
+        function formatGenerationState(stateValue) {
+            if (!stateValue) {
+                return "idle";
+            }
+            return String(stateValue).replaceAll("_", " ");
+        }
+
+        function getBatchProcessedSlides(batch) {
+            if (!batch) {
+                return 0;
+            }
+            if (batch.status === "cancelled" || batch.status === "interrupted") {
+                return Number(batch.total_slides || 0);
+            }
+            return Number(batch.processed_slides || 0);
+        }
+
+        function getBatchProgressPercent(batch) {
+            const total = Math.max(1, Number(batch?.total_slides || 0));
+            return Math.min(100, Math.round((getBatchProcessedSlides(batch) / total) * 100));
+        }
+
+        async function refreshProjectIndex() {
+            const data = await fetchJson("/api/projects");
+            state.projects = data.projects || [];
+            renderProjectList();
+        }
+
+        function stopBatchPolling() {
+            if (uiState.batchPollIntervalId) {
+                window.clearInterval(uiState.batchPollIntervalId);
+                uiState.batchPollIntervalId = null;
+            }
+        }
+
+        function syncBatchStatusMessage() {
+            const batch = getBatchGeneration();
+            if (!batch || !batch.message) {
+                return;
+            }
+            setStatus(batch.message, batch.status === "failed" || batch.status === "interrupted");
         }
 
         async function fetchJson(url, options = {}) {
@@ -654,6 +788,7 @@
         function renderPreview(slide) {
             const feedback = getSlideFeedback(slide.index);
             const hasImage = slide.generated && slide.preview_url;
+            const serverState = slide.generation_status || "idle";
 
             let inner = hasImage
                 ? `<img src="${slide.preview_url}" alt="Slide ${slide.index} preview">`
@@ -694,6 +829,40 @@
                 `;
             }
 
+            if (!feedback && serverState === "running") {
+                inner += `
+                    <div class="preview-feedback">
+                        <div class="preview-feedback-content">
+                            <div class="preview-spinner" aria-hidden="true"></div>
+                            <div class="preview-feedback-title">Generating in background</div>
+                            <div class="preview-feedback-message">This slide is currently being generated.</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (!feedback && serverState === "queued") {
+                inner += `
+                    <div class="preview-feedback cancelled">
+                        <div class="preview-feedback-content">
+                            <div class="preview-feedback-title">Queued</div>
+                            <div class="preview-feedback-message">This slide is waiting for its turn in the background batch.</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (!feedback && (serverState === "failed" || serverState === "interrupted")) {
+                inner += `
+                    <div class="preview-feedback error">
+                        <div class="preview-feedback-content">
+                            <div class="preview-feedback-title">${escapeHtml(formatGenerationState(serverState))}</div>
+                            <div class="preview-feedback-message">${escapeHtml(slide.generation_error || "This slide was not generated successfully.")}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
             return inner;
         }
 
@@ -728,9 +897,7 @@
         }
 
         async function loadProjects(selectProjectName = null) {
-            const data = await fetchJson("/api/projects");
-            state.projects = data.projects || [];
-            renderProjectList();
+            await refreshProjectIndex();
 
             if (selectProjectName) {
                 await loadProject(selectProjectName);
@@ -752,7 +919,52 @@
             state.currentProject = data.project;
             renderProjectList();
             renderApp();
-            setStatus("");
+            if (isBatchBusy() || getBatchGeneration()?.message) {
+                syncBatchStatusMessage();
+            } else {
+                setStatus("");
+            }
+        }
+
+        async function pollBatchGeneration() {
+            if (!state.currentProject || uiState.batchPollRequestInFlight) {
+                return;
+            }
+
+            const projectName = state.currentProject.name;
+            uiState.batchPollRequestInFlight = true;
+            try {
+                const data = await fetchJson(`/api/projects/${encodeURIComponent(projectName)}/generation-status`);
+                if (!state.currentProject || state.currentProject.name !== projectName) {
+                    return;
+                }
+                state.currentProject = data.project;
+                renderApp();
+                syncBatchStatusMessage();
+
+                if (!data.active) {
+                    stopBatchPolling();
+                    await refreshProjectIndex();
+                    syncBatchStatusMessage();
+                }
+            } catch (error) {
+                stopBatchPolling();
+                setStatus(error.message || "Unable to refresh generation progress.", true);
+            } finally {
+                uiState.batchPollRequestInFlight = false;
+            }
+        }
+
+        function syncBatchPolling() {
+            if (isBatchBusy()) {
+                if (!uiState.batchPollIntervalId) {
+                    uiState.batchPollIntervalId = window.setInterval(() => {
+                        void pollBatchGeneration();
+                    }, 1500);
+                }
+                return;
+            }
+            stopBatchPolling();
         }
 
         function renderProjectList() {
@@ -778,6 +990,7 @@
         }
 
         function renderImageThumbs(filenames, target, slideIndex = null) {
+            const batchBusy = isBatchBusy();
             if (!filenames || filenames.length === 0) {
                 return '<div class="slide-meta">No reference images yet.</div>';
             }
@@ -800,6 +1013,7 @@
                             data-delete-image="${escapeHtml(filename)}"
                             data-target="${escapeHtml(target)}"
                             ${slideIndex ? `data-slide-index="${slideIndex}"` : ""}
+                            ${batchBusy ? "disabled" : ""}
                         >
                             Delete
                         </button>
@@ -808,14 +1022,49 @@
             `).join("");
         }
 
+        function renderBatchGenerationSummary(project) {
+            const batch = project.batch_generation;
+            if (!batch || batch.status === "idle") {
+                return "";
+            }
+
+            const progressPercent = getBatchProgressPercent(batch);
+            const processedSlides = getBatchProcessedSlides(batch);
+            const currentSlide = batch.current_slide_index
+                ? `Current slide: ${batch.current_slide_index}`
+                : "Waiting for the next slide";
+
+            return `
+                <div class="generation-summary">
+                    <div class="generation-summary-header">
+                        <div>
+                            <div class="generation-summary-title">Background Generation</div>
+                            <div class="generation-summary-meta">${escapeHtml(batch.message || currentSlide)}</div>
+                        </div>
+                        <span class="status-pill ${escapeHtml(batch.status)}">${escapeHtml(formatGenerationState(batch.status))}</span>
+                    </div>
+                    <div class="progress-track" aria-hidden="true">
+                        <div class="progress-fill" style="width: ${progressPercent}%;"></div>
+                    </div>
+                    <div class="generation-summary-meta">
+                        ${processedSlides}/${Number(batch.total_slides || 0)} processed
+                        · ${Number(batch.completed_slides || 0)} completed
+                        · ${Number(batch.failed_slides || 0)} failed
+                        · ${escapeHtml(currentSlide)}
+                    </div>
+                </div>
+            `;
+        }
+
         function renderSettings() {
             const project = state.currentProject;
+            const batchBusy = isBatchBusy();
             return `
                 <section class="panel settings">
                     <div class="settings-grid">
                         <div class="field">
                             <label for="aspect-ratio">Aspect Ratio</label>
-                            <select id="aspect-ratio">
+                            <select id="aspect-ratio" ${batchBusy ? "disabled" : ""}>
                                 ${aspectOptions.map((option) => `
                                     <option value="${option}" ${project.aspect_ratio === option ? "selected" : ""}>${option}</option>
                                 `).join("")}
@@ -823,7 +1072,7 @@
                         </div>
                         <div class="field">
                             <label for="resolution">Resolution</label>
-                            <select id="resolution">
+                            <select id="resolution" ${batchBusy ? "disabled" : ""}>
                                 ${resolutionOptions.map((option) => `
                                     <option value="${option}" ${project.resolution === option ? "selected" : ""}>${option}</option>
                                 `).join("")}
@@ -831,21 +1080,21 @@
                         </div>
                         <div class="field">
                             <label for="page-count">Pages</label>
-                            <input id="page-count" type="number" min="1" max="50" value="${project.page_count}">
+                            <input id="page-count" type="number" min="1" max="50" value="${project.page_count}" ${batchBusy ? "disabled" : ""}>
                         </div>
                     </div>
 
                     <div class="field">
                         <label for="fixed-text-prompt">Fixed Text Prompt</label>
-                        <textarea id="fixed-text-prompt" placeholder="Default text appended to every slide prompt">${escapeHtml(project.fixed_text_prompt || "")}</textarea>
+                        <textarea id="fixed-text-prompt" placeholder="Default text appended to every slide prompt" ${batchBusy ? "disabled" : ""}>${escapeHtml(project.fixed_text_prompt || "")}</textarea>
                     </div>
 
                     <div class="dropzone" id="fixed-images-dropzone" data-target="fixed">
                         <div class="dropzone-header">
                             <span>Fixed Images: click, paste, or drag files here</span>
                             <div>
-                                <button class="subtle" type="button" id="fixed-images-add-btn">Add Images</button>
-                                <input class="hidden-input" id="fixed-images-input" type="file" accept="image/*" multiple>
+                                <button class="subtle" type="button" id="fixed-images-add-btn" ${batchBusy ? "disabled" : ""}>Add Images</button>
+                                <input class="hidden-input" id="fixed-images-input" type="file" accept="image/*" multiple ${batchBusy ? "disabled" : ""}>
                             </div>
                         </div>
                         <div class="thumb-grid">
@@ -853,9 +1102,12 @@
                         </div>
                     </div>
 
+                    ${renderBatchGenerationSummary(project)}
+
                     <div class="actions">
-                        <button class="primary" type="button" id="update-settings-btn">Update Settings</button>
-                        <button type="button" id="generate-all-btn">Generate All</button>
+                        <button class="primary" type="button" id="update-settings-btn" ${batchBusy ? "disabled" : ""}>Update Settings</button>
+                        <button type="button" id="generate-all-btn" ${batchBusy ? "disabled" : ""}>Generate All</button>
+                        ${batchBusy ? '<button type="button" class="danger" id="cancel-generate-all-btn">Cancel Batch</button>' : ""}
                     </div>
                 </section>
             `;
@@ -863,6 +1115,7 @@
 
         function renderSlides() {
             const project = state.currentProject;
+            const batchBusy = isBatchBusy();
             return `
                 <section class="slides">
                     ${project.slides.map((slide) => `
@@ -871,11 +1124,16 @@
                                 <div class="slide-header">
                                     <h3>Slide ${slide.index}</h3>
                                     <div class="slide-controls">
-                                        <div class="slide-meta">${slide.generated ? "Generated" : "Not generated"}</div>
+                                        <span class="status-pill ${escapeHtml(slide.generation_status || "idle")}">${escapeHtml(
+                                            slide.generation_status && slide.generation_status !== "idle"
+                                                ? formatGenerationState(slide.generation_status)
+                                                : (slide.generated ? "generated" : "not generated")
+                                        )}</span>
                                         <button
                                             type="button"
                                             class="subtle"
                                             data-add-slide-above="${slide.index}"
+                                            ${batchBusy ? "disabled" : ""}
                                         >
                                             Add Slide Above
                                         </button>
@@ -883,7 +1141,7 @@
                                             type="button"
                                             class="danger"
                                             data-delete-slide="${slide.index}"
-                                            ${project.slides.length <= 1 ? "disabled" : ""}
+                                            ${project.slides.length <= 1 || batchBusy ? "disabled" : ""}
                                         >
                                             Delete Slide
                                         </button>
@@ -897,6 +1155,7 @@
                                         data-slide-field="prompt"
                                         data-slide-index="${slide.index}"
                                         placeholder="Describe the slide you want Gemini to generate"
+                                        ${batchBusy ? "disabled" : ""}
                                     >${escapeHtml(slide.prompt || "")}</textarea>
                                 </div>
 
@@ -907,6 +1166,7 @@
                                             type="button"
                                             class="subtle"
                                             data-reset-fixed-text="${slide.index}"
+                                            ${batchBusy ? "disabled" : ""}
                                         >
                                             Reset To Default
                                         </button>
@@ -916,6 +1176,7 @@
                                         data-slide-field="fixed_text_prompt_override"
                                         data-slide-index="${slide.index}"
                                         placeholder="Optional slide-level override"
+                                        ${batchBusy ? "disabled" : ""}
                                     >${escapeHtml(getSlideEffectiveFixedText(slide))}</textarea>
                                 </div>
 
@@ -923,8 +1184,8 @@
                                     <div class="dropzone-header">
                                         <span>Slide Images: click, paste, or drag files here</span>
                                         <div>
-                                            <button class="subtle" type="button" data-open-slide-input="${slide.index}">Add Images</button>
-                                            <input class="hidden-input" id="slide-images-input-${slide.index}" type="file" accept="image/*" multiple>
+                                            <button class="subtle" type="button" data-open-slide-input="${slide.index}" ${batchBusy ? "disabled" : ""}>Add Images</button>
+                                            <input class="hidden-input" id="slide-images-input-${slide.index}" type="file" accept="image/*" multiple ${batchBusy ? "disabled" : ""}>
                                         </div>
                                     </div>
                                     <div class="thumb-grid">
@@ -937,14 +1198,14 @@
                                         class="primary"
                                         type="button"
                                         data-generate-slide="${slide.index}"
-                                        ${isSlideBusy(slide.index) ? "disabled" : ""}
+                                        ${isSlideBusy(slide.index) || batchBusy ? "disabled" : ""}
                                     >
                                         Generate
                                     </button>
                                     <button
                                         type="button"
                                         data-update-slide="${slide.index}"
-                                        ${slide.generated && !isSlideBusy(slide.index) ? "" : "disabled"}
+                                        ${slide.generated && !isSlideBusy(slide.index) && !batchBusy ? "" : "disabled"}
                                     >
                                         Update
                                     </button>
@@ -963,7 +1224,7 @@
                         </article>
                     `).join("")}
                     <div class="slides-footer">
-                        <button class="subtle" type="button" id="append-slide-btn">Add Slide</button>
+                        <button class="subtle" type="button" id="append-slide-btn" ${batchBusy ? "disabled" : ""}>Add Slide</button>
                     </div>
                 </section>
             `;
@@ -971,6 +1232,7 @@
 
         function renderApp() {
             if (!state.currentProject) {
+                stopBatchPolling();
                 projectTitleEl.textContent = "No project selected";
                 projectMetaEl.textContent = "Create a project to start authoring prompts and generating slides.";
                 appRootEl.innerHTML = `
@@ -989,6 +1251,7 @@
             bindImageActions();
             bindSlideActions();
             bindModalActions();
+            syncBatchPolling();
         }
 
         function bindProjectInputs() {
@@ -998,6 +1261,7 @@
             const fixedTextEl = document.getElementById("fixed-text-prompt");
             const updateSettingsBtn = document.getElementById("update-settings-btn");
             const generateAllBtn = document.getElementById("generate-all-btn");
+            const cancelGenerateAllBtn = document.getElementById("cancel-generate-all-btn");
 
             aspectRatioEl.addEventListener("change", () => {
                 state.currentProject.aspect_ratio = aspectRatioEl.value;
@@ -1029,6 +1293,9 @@
 
             updateSettingsBtn.addEventListener("click", () => saveProject(true, "Settings updated."));
             generateAllBtn.addEventListener("click", () => generateAllSlides());
+            if (cancelGenerateAllBtn) {
+                cancelGenerateAllBtn.addEventListener("click", () => cancelGenerateAllSlides());
+            }
         }
 
         function bindSlideActions() {
@@ -1227,6 +1494,8 @@
                 images: [],
                 generated: false,
                 filename: "",
+                generation_status: "idle",
+                generation_error: null,
             };
         }
 
@@ -1304,6 +1573,10 @@
             if (!state.currentProject) {
                 return;
             }
+            if (isBatchBusy()) {
+                setStatus("Wait for background generation to finish or cancel it first.", true);
+                return;
+            }
 
             syncDraftFromDom();
             await saveProject(false);
@@ -1342,6 +1615,10 @@
             if (!files || files.length === 0) {
                 return;
             }
+            if (isBatchBusy()) {
+                setStatus("Image changes are disabled while background generation is running.", true);
+                return;
+            }
 
             syncDraftFromDom();
             await saveProject(false);
@@ -1375,6 +1652,10 @@
             if (!filename) {
                 return;
             }
+            if (isBatchBusy()) {
+                setStatus("Image changes are disabled while background generation is running.", true);
+                return;
+            }
 
             setStatus(`Deleting ${filename}...`);
             const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}/delete-image/${encodeURIComponent(filename)}`, {
@@ -1404,6 +1685,10 @@
 
         async function generateSlide(slideIndex) {
             try {
+                if (isBatchBusy()) {
+                    setStatus("Per-slide generation is disabled while background generation is running.", true);
+                    return;
+                }
                 if (isSlideBusy(slideIndex)) {
                     return;
                 }
@@ -1451,6 +1736,10 @@
 
         async function updateSlide(slideIndex) {
             try {
+                if (isBatchBusy()) {
+                    setStatus("Per-slide updates are disabled while background generation is running.", true);
+                    return;
+                }
                 if (isSlideBusy(slideIndex)) {
                     return;
                 }
@@ -1497,15 +1786,32 @@
         }
 
         async function generateAllSlides() {
+            if (isBatchBusy()) {
+                setStatus("Background generation is already running.", true);
+                return;
+            }
             await saveProject(false);
-            setStatus("Generating all slides sequentially...");
+            setStatus("Starting background generation...");
             const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}/generate-all`, {
                 method: "POST",
             });
             state.currentProject = data.project;
             renderApp();
-            await loadProjects(state.currentProject.name);
-            setStatus("All slides generated.");
+            await refreshProjectIndex();
+            syncBatchStatusMessage();
+        }
+
+        async function cancelGenerateAllSlides() {
+            if (!isBatchBusy()) {
+                return;
+            }
+            setStatus("Requesting batch cancellation...");
+            const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}/generate-all/cancel`, {
+                method: "POST",
+            });
+            state.currentProject = data.project;
+            renderApp();
+            syncBatchStatusMessage();
         }
 
         async function createProject() {
