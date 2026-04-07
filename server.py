@@ -5,6 +5,7 @@ import io
 import json
 import os
 import re
+import shutil
 import threading
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -157,6 +158,62 @@ def save_project(project: dict[str, Any]) -> None:
         folder.mkdir(exist_ok=True)
         project["updated_at"] = now_iso()
         project_json_path(name).write_text(json.dumps(project, indent=2), encoding="utf-8")
+
+
+def project_folder_has_assets(folder: Path) -> bool:
+    for child in folder.iterdir():
+        if child.name == "project.json" or child.name.startswith("."):
+            continue
+        return True
+    return False
+
+
+def project_has_meaningful_content(project: dict[str, Any]) -> bool:
+    if str(project.get("fixed_text_prompt", "")).strip():
+        return True
+    if project.get("fixed_images"):
+        return True
+
+    for slide in project.get("slides", []):
+        if str(slide.get("prompt", "")).strip():
+            return True
+        if slide.get("fixed_text_prompt_override") not in {None, ""}:
+            return True
+        if slide.get("images"):
+            return True
+        if slide.get("generated"):
+            return True
+
+    return False
+
+
+def project_delete_warning(has_assets: bool) -> str:
+    if has_assets:
+        return "this project has assets are you sure"
+    return "This project has content. Are you sure you want to delete it?"
+
+
+def invalid_project_stub(project_name: str, project_error: str, has_assets: bool, updated_at: str | None = None) -> dict[str, Any]:
+    timestamp = updated_at or now_iso()
+    is_empty = not has_assets
+    return {
+        "name": slugify_project_name(project_name),
+        "created_at": timestamp,
+        "updated_at": timestamp,
+        "aspect_ratio": DEFAULT_ASPECT_RATIO,
+        "resolution": DEFAULT_RESOLUTION,
+        "fixed_text_prompt": "",
+        "fixed_images": [],
+        "slides": [],
+        "page_count": 0,
+        "batch_generation": default_batch_generation(1),
+        "is_valid": False,
+        "project_error": project_error,
+        "is_empty": is_empty,
+        "has_assets": has_assets,
+        "delete_requires_confirmation": not is_empty,
+        "delete_warning": project_delete_warning(has_assets) if not is_empty else "",
+    }
 
 
 def get_runtime_job(project_name: str) -> dict[str, Any] | None:
@@ -374,7 +431,68 @@ def serialize_project(project: dict[str, Any]) -> dict[str, Any]:
         filename: f"/projects/{payload['name']}/{filename}?t={payload['updated_at']}"
         for filename in payload.get("fixed_images", [])
     }
+    folder = project_dir(payload["name"])
+    has_assets = project_folder_has_assets(folder)
+    is_empty = not has_assets and not project_has_meaningful_content(project)
+    payload["is_valid"] = True
+    payload["project_error"] = None
+    payload["has_assets"] = has_assets
+    payload["is_empty"] = is_empty
+    payload["delete_requires_confirmation"] = not is_empty
+    payload["delete_warning"] = project_delete_warning(has_assets) if not is_empty else ""
     return payload
+
+
+def project_list_entry_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": payload["name"],
+        "updated_at": payload["updated_at"],
+        "created_at": payload["created_at"],
+        "page_count": payload.get("page_count", len(payload.get("slides", []))),
+        "is_valid": payload.get("is_valid", True),
+        "project_error": payload.get("project_error"),
+        "is_empty": payload.get("is_empty", False),
+        "has_assets": payload.get("has_assets", False),
+        "delete_requires_confirmation": payload.get("delete_requires_confirmation", True),
+        "delete_warning": payload.get("delete_warning", ""),
+    }
+
+
+def inspect_project_record(project_name: str) -> dict[str, Any]:
+    name = slugify_project_name(project_name)
+    folder = project_dir(name)
+    project_file = folder / "project.json"
+    if not folder.exists():
+        raise FileNotFoundError(f"Project '{name}' does not exist.")
+
+    updated_at = datetime.fromtimestamp(project_file.stat().st_mtime, timezone.utc).replace(microsecond=0).isoformat() if project_file.exists() else now_iso()
+    has_assets = project_folder_has_assets(folder)
+
+    if not project_file.exists():
+        return invalid_project_stub(
+            name,
+            "project.json is missing.",
+            has_assets=has_assets,
+            updated_at=updated_at,
+        )
+
+    try:
+        project = load_project(name)
+    except (json.JSONDecodeError, ProjectError, ValueError) as exc:
+        return invalid_project_stub(
+            name,
+            str(exc) or "project.json could not be read.",
+            has_assets=has_assets,
+            updated_at=updated_at,
+        )
+
+    return serialize_project(project)
+
+
+def delete_project_folder(project_name: str) -> None:
+    folder = project_dir(project_name)
+    if folder.exists():
+        shutil.rmtree(folder)
 
 
 def ensure_batch_not_running(project_name: str) -> None:
@@ -872,19 +990,9 @@ def list_projects():
     for candidate in PROJECTS_DIR.iterdir():
         if not candidate.is_dir():
             continue
-        project_file = candidate / "project.json"
-        if not project_file.exists():
-            continue
         try:
-            project = load_project(candidate.name)
-            projects.append(
-                {
-                    "name": project["name"],
-                    "updated_at": project["updated_at"],
-                    "created_at": project["created_at"],
-                    "page_count": len(project["slides"]),
-                }
-            )
+            project_payload = inspect_project_record(candidate.name)
+            projects.append(project_list_entry_from_payload(project_payload))
         except Exception:
             continue
 
@@ -917,8 +1025,8 @@ def create_project():
 
 @app.get("/api/projects/<project_name>")
 def get_project(project_name: str):
-    project = load_project(project_name)
-    return jsonify({"project": serialize_project(project)})
+    project = inspect_project_record(project_name)
+    return jsonify({"project": project})
 
 
 @app.put("/api/projects/<project_name>")
@@ -985,6 +1093,31 @@ def generation_status(project_name: str):
             "active": bool(runtime_job and runtime_job["status"] in BATCH_ACTIVE_STATES),
         }
     )
+
+
+@app.delete("/api/projects/<project_name>")
+def delete_project(project_name: str):
+    payload = request.get_json(silent=True) or {}
+    confirm_delete = bool(payload.get("confirm"))
+    project_payload = inspect_project_record(project_name)
+
+    if project_payload.get("is_valid"):
+        ensure_batch_not_running(project_name)
+
+    if project_payload["delete_requires_confirmation"] and not confirm_delete:
+        return (
+            jsonify(
+                {
+                    "error": project_payload["delete_warning"],
+                    "requires_confirmation": True,
+                    "project": project_payload,
+                }
+            ),
+            409,
+        )
+
+    delete_project_folder(project_name)
+    return jsonify({"deleted": True, "project_name": project_payload["name"]})
 
 
 @app.post("/api/projects/<project_name>/generate-all/cancel")
