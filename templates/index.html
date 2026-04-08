@@ -198,6 +198,22 @@
             font-size: 1.5rem;
         }
 
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
         .status {
             min-height: 1.5rem;
             color: var(--muted);
@@ -596,6 +612,226 @@
             object-fit: contain;
         }
 
+        .script-layout {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .script-panel {
+            padding: 1.25rem;
+        }
+
+        .script-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .script-header h3,
+        .storyboard-card h3 {
+            margin: 0;
+        }
+
+        .script-copy {
+            color: var(--muted);
+            line-height: 1.45;
+        }
+
+        .rules-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+
+        .rule-actions {
+            display: flex;
+            gap: 0.65rem;
+            flex-wrap: wrap;
+            margin-top: 0.55rem;
+        }
+
+        .storyboard-list {
+            display: grid;
+            gap: 1.15rem;
+        }
+
+        .storyboard-progress {
+            margin-top: 0.9rem;
+            display: grid;
+            gap: 0.45rem;
+        }
+
+        .storyboard-progress-label {
+            color: var(--muted);
+            font-size: 0.88rem;
+        }
+
+        .storyboard-progress-track {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(51, 65, 85, 0.7);
+            overflow: hidden;
+        }
+
+        .storyboard-progress-fill {
+            width: 38%;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            animation: storyboard-progress-indeterminate 1.1s ease-in-out infinite;
+            transform-origin: left center;
+        }
+
+        @keyframes storyboard-progress-indeterminate {
+            0% {
+                transform: translateX(-100%) scaleX(0.8);
+            }
+            50% {
+                transform: translateX(120%) scaleX(1.05);
+            }
+            100% {
+                transform: translateX(290%) scaleX(0.8);
+            }
+        }
+
+        .storyboard-card {
+            padding: 1.25rem;
+            display: grid;
+            gap: 1.1rem;
+            border-color: rgba(148, 163, 184, 0.22);
+            background:
+                linear-gradient(180deg, rgba(30, 41, 59, 0.72), rgba(15, 23, 42, 0.92)),
+                rgba(17, 24, 39, 0.92);
+            box-shadow:
+                0 18px 42px rgba(2, 6, 23, 0.32),
+                inset 0 1px 0 rgba(148, 163, 184, 0.08);
+        }
+
+        .storyboard-card.dragging {
+            opacity: 0.55;
+        }
+
+        .storyboard-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .storyboard-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .storyboard-card-title h3 {
+            font-size: 1.05rem;
+            letter-spacing: 0.01em;
+        }
+
+        .storyboard-card-body {
+            display: grid;
+            gap: 1rem;
+            max-width: 58rem;
+        }
+
+        .storyboard-notes-panel {
+            display: grid;
+            gap: 0.8rem;
+            max-width: 54rem;
+            padding: 1rem;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 16px;
+            background: rgba(15, 23, 42, 0.52);
+        }
+
+        .storyboard-notes-copy {
+            color: var(--muted);
+            line-height: 1.5;
+            max-width: 48rem;
+        }
+
+        .storyboard-notes-panel textarea {
+            min-height: 110px;
+            max-width: 54rem;
+            line-height: 1.6;
+        }
+
+        .storyboard-notes-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .storyboard-text-field {
+            max-width: 54rem;
+        }
+
+        .storyboard-text-field label {
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.76rem;
+        }
+
+        .storyboard-text-field textarea,
+        .storyboard-idea-field textarea {
+            max-width: 54rem;
+            min-height: 96px;
+            line-height: 1.6;
+        }
+
+        .storyboard-bottom-cta {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 1.25rem;
+            padding-top: 0.35rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.14);
+        }
+
+        .storyboard-bottom-cta button {
+            min-width: min(100%, 240px);
+        }
+
+        .drag-handle {
+            cursor: grab;
+            user-select: none;
+            border: 1px dashed rgba(148, 163, 184, 0.35);
+            border-radius: 10px;
+            padding: 0.45rem 0.6rem;
+            color: var(--muted);
+            background: rgba(2, 6, 23, 0.35);
+        }
+
+        .readonly-input {
+            display: flex;
+            align-items: center;
+            min-height: 48px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.45);
+            padding: 0.75rem 0.9rem;
+            color: var(--text);
+        }
+
+        .settings-modal-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
         @keyframes spin {
             to {
                 transform: rotate(360deg);
@@ -617,6 +853,24 @@
             .settings-grid,
             .slide-card {
                 grid-template-columns: 1fr;
+            }
+
+            .topbar-right,
+            .topbar-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .storyboard-bottom-cta {
+                justify-content: stretch;
+            }
+
+            .storyboard-bottom-cta button {
+                width: 100%;
+            }
+
+            .storyboard-notes-actions > * {
+                width: 100%;
             }
         }
     </style>
@@ -640,7 +894,10 @@
                     <h2 id="project-title">No project selected</h2>
                     <div id="project-meta" class="status"></div>
                 </div>
-                <div id="status" class="status"></div>
+                <div class="topbar-right">
+                    <div id="topbar-actions" class="topbar-actions"></div>
+                    <div id="status" class="status"></div>
+                </div>
             </div>
 
             <div id="app-root"></div>
@@ -656,8 +913,27 @@
             slideFeedback: {},
             generationControllers: {},
             imageModal: null,
+            currentPage: "editor",
+            defaults: {
+                general_rules: "",
+                hook_rules: "",
+                default_characters: "",
+                refinement_rules: "",
+            },
+            defaultsLoaded: false,
+            showAdvancedRules: false,
+            expandedScriptRuleEditors: {
+                general_rules: false,
+                hook_rules: false,
+                default_characters: false,
+            },
+            settingsModalOpen: false,
+            draggingStoryboardIndex: null,
+            storyboardNotesOpenIndex: null,
+            storyboardNotesDrafts: {},
             batchPollIntervalId: null,
             batchPollRequestInFlight: false,
+            storyboardGenerationInFlight: false,
         };
 
         const aspectOptions = ["1:1", "4:5", "9:16", "16:9", "21:9", "3:4"];
@@ -668,12 +944,21 @@
         const appRootEl = document.getElementById("app-root");
         const projectTitleEl = document.getElementById("project-title");
         const projectMetaEl = document.getElementById("project-meta");
+        const topbarActionsEl = document.getElementById("topbar-actions");
         const statusEl = document.getElementById("status");
         const newProjectBtn = document.getElementById("new-project-btn");
 
         function setStatus(message = "", isError = false) {
             statusEl.textContent = message;
             statusEl.classList.toggle("error", Boolean(isError));
+        }
+
+        function getInitialProjectPage(project) {
+            return project?.editor_ready ? "editor" : "script";
+        }
+
+        function setCurrentPage(page) {
+            uiState.currentPage = page === "script" ? "script" : "editor";
         }
 
         function getBatchGeneration() {
@@ -683,6 +968,28 @@
         function getProjectSummary(projectName) {
             return state.projects.find((project) => project.name === projectName)
                 || (state.currentProject?.name === projectName ? state.currentProject : null);
+        }
+
+        function getCurrentScriptState() {
+            return state.currentProject?.script || {
+                general_rules_override: null,
+                hook_rules_override: null,
+                default_characters_override: null,
+                refinement_rules_override: null,
+                carousel_idea: "",
+                character_reference_images: [],
+                storyboard: [],
+            };
+        }
+
+        function getEffectiveRule(ruleName) {
+            const script = getCurrentScriptState();
+            const overrideKey = `${ruleName}_override`;
+            const overrideValue = script[overrideKey];
+            if (overrideValue !== null && overrideValue !== undefined) {
+                return String(overrideValue);
+            }
+            return String(uiState.defaults[ruleName] || "");
         }
 
         function isBatchBusy() {
@@ -749,6 +1056,42 @@
             return data;
         }
 
+        async function ensureDefaultsLoaded(forceReload = false) {
+            if (uiState.defaultsLoaded && !forceReload) {
+                return uiState.defaults;
+            }
+
+            const data = await fetchJson("/api/defaults");
+            uiState.defaults = {
+                general_rules: data.defaults?.general_rules || "",
+                hook_rules: data.defaults?.hook_rules || "",
+                default_characters: data.defaults?.default_characters || "",
+                refinement_rules: data.defaults?.refinement_rules || "",
+            };
+            uiState.defaultsLoaded = true;
+            return uiState.defaults;
+        }
+
+        function buildScriptPayloadFromState() {
+            const script = getCurrentScriptState();
+            return {
+                general_rules_override: script.general_rules_override,
+                hook_rules_override: script.hook_rules_override,
+                default_characters_override: script.default_characters_override,
+                refinement_rules_override: script.refinement_rules_override,
+                carousel_idea: script.carousel_idea || "",
+                character_reference_images: Array.isArray(script.character_reference_images)
+                    ? [...script.character_reference_images]
+                    : [],
+                storyboard: Array.isArray(script.storyboard)
+                    ? script.storyboard.map((card) => ({
+                        hook: card.hook || "",
+                        visual_description: card.visual_description || "",
+                    }))
+                    : [],
+            };
+        }
+
         async function deleteProjectRequest(projectName, confirmDelete = false) {
             const response = await fetch(`/api/projects/${encodeURIComponent(projectName)}`, {
                 method: "DELETE",
@@ -789,10 +1132,11 @@
             return `/projects/${projectName}/${filename}?t=${Date.now()}`;
         }
 
-        function getSlideEffectiveFixedText(slide) {
-            return slide.fixed_text_prompt_override !== null
-                ? slide.fixed_text_prompt_override
-                : state.currentProject.fixed_text_prompt;
+        function getSlideOverrideFixedText(slide) {
+            if (slide.fixed_text_prompt_override === null || slide.fixed_text_prompt_override === undefined) {
+                return "";
+            }
+            return slide.fixed_text_prompt_override;
         }
 
         function getSlideFeedback(slideIndex) {
@@ -934,16 +1278,16 @@
             `;
         }
 
-        async function loadProjects(selectProjectName = null) {
+        async function loadProjects(selectProjectName = null, preferredPage = null) {
             await refreshProjectIndex();
 
             if (selectProjectName) {
-                await loadProject(selectProjectName);
+                await loadProject(selectProjectName, preferredPage);
                 return;
             }
 
             if (!state.currentProject && state.projects.length > 0) {
-                await loadProject(state.projects[0].name);
+                await loadProject(state.projects[0].name, preferredPage);
             } else if (!state.currentProject) {
                 renderApp();
             } else {
@@ -951,10 +1295,16 @@
             }
         }
 
-        async function loadProject(name) {
+        async function loadProject(name, preferredPage = null) {
             setStatus("Loading project...");
             const data = await fetchJson(`/api/projects/${encodeURIComponent(name)}`);
             state.currentProject = data.project;
+            uiState.storyboardNotesOpenIndex = null;
+            uiState.storyboardNotesDrafts = {};
+            setCurrentPage(preferredPage || getInitialProjectPage(data.project));
+            if (uiState.currentPage === "script") {
+                await ensureDefaultsLoaded();
+            }
             renderProjectList();
             renderApp();
             if (isBatchBusy() || getBatchGeneration()?.message) {
@@ -994,7 +1344,7 @@
                 stopBatchPolling();
                 state.currentProject = null;
                 if (state.projects.length > 0) {
-                    await loadProject(state.projects[0].name);
+                    await loadProject(state.projects[0].name, uiState.currentPage);
                     setStatus(`Deleted project ${projectName}.`);
                 } else {
                     renderApp();
@@ -1180,6 +1530,287 @@
             `;
         }
 
+        function renderTopbarActions() {
+            if (!state.currentProject || !state.currentProject.is_valid) {
+                topbarActionsEl.innerHTML = "";
+                return;
+            }
+
+            if (uiState.currentPage === "script") {
+                topbarActionsEl.innerHTML = `
+                    <button type="button" class="subtle" id="skip-to-editor-btn">Skip → Editor</button>
+                    <button type="button" class="subtle" id="open-global-settings-btn">Settings</button>
+                `;
+                return;
+            }
+
+            topbarActionsEl.innerHTML = `
+                <button type="button" class="subtle" id="go-to-script-writer-btn">← Script Writer</button>
+            `;
+        }
+
+        function renderGlobalDefaultsModal() {
+            if (!uiState.settingsModalOpen) {
+                return "";
+            }
+
+            return `
+                <div class="image-modal" id="settings-modal-overlay">
+                    <div class="image-modal-card">
+                        <div class="image-modal-header">
+                            <h3>Global Script Writer Defaults</h3>
+                            <button type="button" class="subtle" id="close-settings-modal-btn">Close</button>
+                        </div>
+                        <div class="settings-modal-grid">
+                            <div class="field">
+                                <label for="global-general-rules">General Rules</label>
+                                <textarea id="global-general-rules">${escapeHtml(uiState.defaults.general_rules || "")}</textarea>
+                            </div>
+                            <div class="field">
+                                <label for="global-hook-rules">Hook Rules</label>
+                                <textarea id="global-hook-rules">${escapeHtml(uiState.defaults.hook_rules || "")}</textarea>
+                            </div>
+                            <div class="field">
+                                <label for="global-default-characters">Default Characters</label>
+                                <textarea id="global-default-characters">${escapeHtml(uiState.defaults.default_characters || "")}</textarea>
+                            </div>
+                            <div class="field">
+                                <label for="global-refinement-rules">Refinement Rules</label>
+                                <textarea id="global-refinement-rules">${escapeHtml(uiState.defaults.refinement_rules || "")}</textarea>
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button type="button" class="primary" id="save-global-settings-btn">Save Global Defaults</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderScriptRuleEditor(ruleName, label, placeholder = "") {
+            const isExpanded = Boolean(uiState.expandedScriptRuleEditors[ruleName]);
+            const fieldId = ruleName.replaceAll("_", "-");
+            const buttonLabel = isExpanded ? `Hide ${label}` : `Edit ${label}`;
+            return `
+                <div class="field">
+                    <div class="rule-actions">
+                        <button type="button" class="subtle" data-toggle-script-rule="${ruleName}">${escapeHtml(buttonLabel)}</button>
+                    </div>
+                    ${isExpanded ? `
+                        <label for="${fieldId}">${escapeHtml(label)}</label>
+                        <textarea id="${fieldId}" ${placeholder ? `placeholder="${escapeHtml(placeholder)}"` : ""}>${escapeHtml(getEffectiveRule(ruleName))}</textarea>
+                        <div class="rule-actions">
+                            <button type="button" class="subtle" data-reset-rule="${ruleName}">Reset ↺</button>
+                            <button type="button" class="subtle" data-save-rule-global="${ruleName}">Save as global default</button>
+                        </div>
+                    ` : ""}
+                </div>
+            `;
+        }
+
+        function renderScriptSetup() {
+            const script = getCurrentScriptState();
+            return `
+                <section class="panel script-panel">
+                    <div class="script-header">
+                        <div>
+                            <h3>Script Writer</h3>
+                            <div class="script-copy">Turn a rough idea into a storyboard, then refine it into editor-ready image prompts.</div>
+                        </div>
+                    </div>
+
+                    <div class="rules-grid">
+                        ${renderScriptRuleEditor("general_rules", "General Rules")}
+                        ${renderScriptRuleEditor("hook_rules", "Hook Rules")}
+                        ${renderScriptRuleEditor(
+                            "default_characters",
+                            "Character Styles",
+                            "Describe the recurring characters, art style, and character rules for this carousel"
+                        )}
+
+                        <div class="field">
+                            <label for="storyboard-refinement-rules">Refinement Rules</label>
+                            <textarea id="storyboard-refinement-rules">${escapeHtml(getEffectiveRule("refinement_rules"))}</textarea>
+                            <div class="rule-actions">
+                                <button type="button" class="subtle" data-reset-rule="refinement_rules">Reset ↺</button>
+                                <button type="button" class="subtle" data-save-rule-global="refinement_rules">Save as global default</button>
+                            </div>
+                        </div>
+
+                        <div class="toggle-row">
+                            <div class="script-copy">Refinement Rules are used only during the silent refinement step.</div>
+                            <button type="button" class="subtle" id="toggle-advanced-rules-btn">
+                                ${uiState.showAdvancedRules ? "Hide advanced" : "Show advanced"}
+                            </button>
+                        </div>
+
+                        ${uiState.showAdvancedRules ? `
+                            <div class="field">
+                                <label for="refinement-rules">Refinement Rules</label>
+                                <textarea id="refinement-rules">${escapeHtml(getEffectiveRule("refinement_rules"))}</textarea>
+                                <div class="rule-actions">
+                                    <button type="button" class="subtle" data-reset-rule="refinement_rules">Reset ↺</button>
+                                    <button type="button" class="subtle" data-save-rule-global="refinement_rules">Save as global default</button>
+                                </div>
+                            </div>
+                        ` : ""}
+
+                        <div class="field">
+                            <label for="carousel-idea">Carousel Idea</label>
+                            <textarea id="carousel-idea" placeholder="Describe the carousel idea you want to turn into a storyboard">${escapeHtml(script.carousel_idea || "")}</textarea>
+                        </div>
+
+                        <div class="field">
+                            <label>Character Reference Images</label>
+                            <div class="dropzone" id="script-character-images-dropzone" data-target="script_character" tabindex="0">
+                                <div class="dropzone-content">
+                                    <span>Character references: click, paste, or drag images here</span>
+                                    <div class="actions" style="margin-top: 0.75rem;">
+                                        <button class="subtle" type="button" id="script-character-images-add-btn">Add Images</button>
+                                        <input class="hidden-input" id="script-character-images-input" type="file" accept="image/*" multiple>
+                                    </div>
+                                </div>
+                                ${renderImageThumbs(script.character_reference_images, "script_character")}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <button type="button" class="primary" id="generate-storyboard-btn" ${uiState.storyboardGenerationInFlight ? "disabled" : ""}>Generate Storyboard</button>
+                    </div>
+                    ${uiState.storyboardGenerationInFlight ? renderStoryboardProgress() : ""}
+                </section>
+            `;
+        }
+
+        function renderStoryboardView() {
+            const script = getCurrentScriptState();
+            return `
+                <section class="script-layout">
+                    <section class="panel script-panel">
+                        <div class="script-header">
+                            <div>
+                                <h3>Storyboard</h3>
+                                <div class="script-copy">Edit the idea or slide cards directly, then refine them into image prompts.</div>
+                            </div>
+                        </div>
+
+                        <div class="field storyboard-idea-field">
+                            <label for="storyboard-carousel-idea">Original Carousel Idea</label>
+                            <textarea id="storyboard-carousel-idea">${escapeHtml(script.carousel_idea || "")}</textarea>
+                        </div>
+
+                        ${renderScriptRuleEditor(
+                            "default_characters",
+                            "Character Styles",
+                            "Describe the recurring characters, art style, and character rules for this carousel"
+                        )}
+
+                        <div class="field">
+                            <label>Character Reference Images</label>
+                            <div class="dropzone" id="script-character-images-dropzone" data-target="script_character" tabindex="0">
+                                <div class="dropzone-content">
+                                    <span>Character references: click, paste, or drag images here</span>
+                                    <div class="actions" style="margin-top: 0.75rem;">
+                                        <button class="subtle" type="button" id="script-character-images-add-btn">Add Images</button>
+                                        <input class="hidden-input" id="script-character-images-input" type="file" accept="image/*" multiple>
+                                    </div>
+                                </div>
+                                ${renderImageThumbs(script.character_reference_images, "script_character")}
+                            </div>
+                        </div>
+
+                        <div class="actions">
+                            <button type="button" class="subtle" id="regenerate-storyboard-btn" ${uiState.storyboardGenerationInFlight ? "disabled" : ""}>Regenerate Storyboard</button>
+                        </div>
+                        ${uiState.storyboardGenerationInFlight ? renderStoryboardProgress() : ""}
+                    </section>
+
+                    <section class="storyboard-list">
+                        ${script.storyboard.map((card, index) => {
+                            const slideIndex = index + 1;
+                            const notesOpen = uiState.storyboardNotesOpenIndex === slideIndex;
+                            const noteDraft = uiState.storyboardNotesDrafts[String(slideIndex)] || "";
+                            return `
+                            <article
+                                class="panel storyboard-card"
+                                draggable="true"
+                                data-storyboard-card="${slideIndex}"
+                            >
+                                <div class="storyboard-card-header">
+                                    <div class="storyboard-card-title">
+                                        <button type="button" class="drag-handle" data-drag-handle="${slideIndex}">⇅</button>
+                                        <h3>Slide ${slideIndex}</h3>
+                                    </div>
+                                    <div class="actions" style="margin-top: 0;">
+                                        <button type="button" class="subtle" data-toggle-storyboard-notes="${slideIndex}">Update with User notes</button>
+                                        <button type="button" class="danger" data-remove-storyboard-slide="${slideIndex}" ${script.storyboard.length <= 1 ? "disabled" : ""}>Remove slide</button>
+                                    </div>
+                                </div>
+
+                                ${notesOpen ? `
+                                    <div class="storyboard-notes-panel">
+                                        <div>
+                                            <label for="storyboard-notes-${slideIndex}">User notes</label>
+                                            <div class="storyboard-notes-copy">Add guidance for this slide only. These notes are used once for this update and are not saved after a successful refresh.</div>
+                                        </div>
+                                        <textarea id="storyboard-notes-${slideIndex}" data-storyboard-notes-input="${slideIndex}" placeholder="Example: Make the hook more contrarian, keep the same character, and shift the visual to a tighter close-up.">${escapeHtml(noteDraft)}</textarea>
+                                        <div class="storyboard-notes-actions">
+                                            <button type="button" class="primary" data-submit-storyboard-notes="${slideIndex}">Update Notes</button>
+                                            <button type="button" class="subtle" data-cancel-storyboard-notes="${slideIndex}">Cancel</button>
+                                        </div>
+                                    </div>
+                                ` : ""}
+
+                                <div class="storyboard-card-body">
+                                    <div class="field storyboard-text-field">
+                                        <label for="storyboard-hook-${slideIndex}">Hook / one-liner</label>
+                                        <textarea id="storyboard-hook-${slideIndex}" data-storyboard-field="hook" data-storyboard-index="${slideIndex}">${escapeHtml(card.hook || "")}</textarea>
+                                    </div>
+
+                                    <div class="field storyboard-text-field">
+                                        <label for="storyboard-visual-${slideIndex}">Visual description</label>
+                                        <textarea id="storyboard-visual-${slideIndex}" data-storyboard-field="visual_description" data-storyboard-index="${slideIndex}">${escapeHtml(card.visual_description || "")}</textarea>
+                                    </div>
+                                </div>
+                            </article>
+                        `;
+                        }).join("")}
+                    </section>
+
+                    <section class="panel script-panel">
+                        <div class="actions">
+                            <button type="button" class="subtle" id="add-storyboard-slide-btn">Add slide</button>
+                        </div>
+                    </section>
+
+                    <section class="storyboard-bottom-cta">
+                        <button type="button" class="primary" id="refine-storyboard-btn">Continue to Generation</button>
+                    </section>
+                </section>
+            `;
+        }
+
+        function renderScriptWriter() {
+            const script = getCurrentScriptState();
+            return `
+                ${script.storyboard && script.storyboard.length > 0 ? renderStoryboardView() : renderScriptSetup()}
+                ${renderGlobalDefaultsModal()}
+                ${renderImageModal()}
+            `;
+        }
+
+        function renderStoryboardProgress() {
+            return `
+                <div class="storyboard-progress">
+                    <div class="storyboard-progress-label">Generating storyboard. Please wait...</div>
+                    <div class="storyboard-progress-track" role="progressbar" aria-label="Generating storyboard" aria-valuemin="0" aria-valuemax="100" aria-valuetext="In progress">
+                        <div class="storyboard-progress-fill"></div>
+                    </div>
+                </div>
+            `;
+        }
+
         function renderSettings() {
             const project = state.currentProject;
             const batchBusy = isBatchBusy();
@@ -1204,7 +1835,7 @@
                         </div>
                         <div class="field">
                             <label for="page-count">Pages</label>
-                            <input id="page-count" type="number" min="1" max="50" value="${project.page_count}" ${batchBusy ? "disabled" : ""}>
+                            <div id="page-count" class="readonly-input">${project.page_count}</div>
                         </div>
                     </div>
 
@@ -1254,22 +1885,6 @@
                                                 ? formatGenerationState(slide.generation_status)
                                                 : (slide.generated ? "generated" : "not generated")
                                         )}</span>
-                                        <button
-                                            type="button"
-                                            class="subtle"
-                                            data-add-slide-above="${slide.index}"
-                                            ${batchBusy ? "disabled" : ""}
-                                        >
-                                            Add Slide Above
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="danger"
-                                            data-delete-slide="${slide.index}"
-                                            ${project.slides.length <= 1 || batchBusy ? "disabled" : ""}
-                                        >
-                                            Delete Slide
-                                        </button>
                                     </div>
                                 </div>
 
@@ -1302,7 +1917,7 @@
                                         data-slide-index="${slide.index}"
                                         placeholder="Optional slide-level override"
                                         ${batchBusy ? "disabled" : ""}
-                                    >${escapeHtml(getSlideEffectiveFixedText(slide))}</textarea>
+                                    >${escapeHtml(getSlideOverrideFixedText(slide))}</textarea>
                                 </div>
 
                                 <div class="dropzone" style="margin-top: 0.9rem;" data-target="slide" data-slide-index="${slide.index}">
@@ -1348,9 +1963,6 @@
                             </div>
                         </article>
                     `).join("")}
-                    <div class="slides-footer">
-                        <button class="subtle" type="button" id="append-slide-btn" ${batchBusy ? "disabled" : ""}>Add Slide</button>
-                    </div>
                 </section>
             `;
         }
@@ -1360,6 +1972,7 @@
                 stopBatchPolling();
                 projectTitleEl.textContent = "No project selected";
                 projectMetaEl.textContent = "Create a project to start authoring prompts and generating slides.";
+                topbarActionsEl.innerHTML = "";
                 appRootEl.innerHTML = `
                     <div class="panel empty-state">
                         <p>Create a project from the sidebar to start building a carousel.</p>
@@ -1372,15 +1985,25 @@
             projectMetaEl.textContent = state.currentProject.is_valid
                 ? `Updated ${state.currentProject.updated_at}`
                 : "project.json is empty or invalid.";
+            renderTopbarActions();
             appRootEl.innerHTML = state.currentProject.is_valid
-                ? `${renderSettings()}${renderSlides()}${renderImageModal()}`
+                ? (
+                    uiState.currentPage === "script"
+                        ? renderScriptWriter()
+                        : `${renderSettings()}${renderSlides()}${renderImageModal()}${renderGlobalDefaultsModal()}`
+                )
                 : `${renderInvalidProjectView(state.currentProject)}${renderImageModal()}`;
             bindAutoResize(appRootEl);
             bindProjectDeleteActions();
             if (state.currentProject.is_valid) {
-                bindProjectInputs();
-                bindImageActions();
-                bindSlideActions();
+                if (uiState.currentPage === "script") {
+                    bindScriptWriterActions();
+                    bindImageActions();
+                } else {
+                    bindProjectInputs();
+                    bindImageActions();
+                    bindSlideActions();
+                }
             }
             bindModalActions();
             syncBatchPolling();
@@ -1389,13 +2012,12 @@
         function bindProjectInputs() {
             const aspectRatioEl = document.getElementById("aspect-ratio");
             const resolutionEl = document.getElementById("resolution");
-            const pageCountEl = document.getElementById("page-count");
             const fixedTextEl = document.getElementById("fixed-text-prompt");
             const updateSettingsBtn = document.getElementById("update-settings-btn");
             const generateAllBtn = document.getElementById("generate-all-btn");
             const cancelGenerateAllBtn = document.getElementById("cancel-generate-all-btn");
 
-            if (!aspectRatioEl || !resolutionEl || !pageCountEl || !fixedTextEl || !updateSettingsBtn || !generateAllBtn) {
+            if (!aspectRatioEl || !resolutionEl || !fixedTextEl || !updateSettingsBtn || !generateAllBtn) {
                 return;
             }
 
@@ -1405,11 +2027,6 @@
 
             resolutionEl.addEventListener("change", () => {
                 state.currentProject.resolution = resolutionEl.value;
-            });
-
-            pageCountEl.addEventListener("input", () => {
-                const value = Number(pageCountEl.value || state.currentProject.page_count || 1);
-                state.currentProject.page_count = Math.max(1, Math.min(50, value));
             });
 
             fixedTextEl.addEventListener("input", () => {
@@ -1457,7 +2074,8 @@
             appRootEl.querySelectorAll("[data-slide-field='fixed_text_prompt_override']").forEach((textarea) => {
                 textarea.addEventListener("input", () => {
                     const slide = state.currentProject.slides[Number(textarea.dataset.slideIndex) - 1];
-                    slide.fixed_text_prompt_override = textarea.value;
+                    const normalized = textarea.value.trim();
+                    slide.fixed_text_prompt_override = normalized ? textarea.value : null;
                 });
             });
 
@@ -1480,22 +2098,484 @@
             appRootEl.querySelectorAll("[data-cancel-generation]").forEach((button) => {
                 button.addEventListener("click", () => cancelGeneration(Number(button.dataset.cancelGeneration)));
             });
+        }
 
-            appRootEl.querySelectorAll("[data-add-slide-above]").forEach((button) => {
-                button.addEventListener("click", () => addSlideAbove(Number(button.dataset.addSlideAbove)));
+        function syncScriptDraftFromDom() {
+            if (!state.currentProject) {
+                return;
+            }
+
+            const script = getCurrentScriptState();
+            const generalRulesEl = document.getElementById("general-rules");
+            const hookRulesEl = document.getElementById("hook-rules");
+            const defaultCharactersEl = document.getElementById("default-characters");
+            const refinementRulesEl = document.getElementById("refinement-rules");
+            const storyboardRefinementRulesEl = document.getElementById("storyboard-refinement-rules");
+            const setupIdeaEl = document.getElementById("carousel-idea");
+            const storyboardIdeaEl = document.getElementById("storyboard-carousel-idea");
+
+            if (generalRulesEl) {
+                script.general_rules_override = (
+                    script.general_rules_override !== null || generalRulesEl.value !== (uiState.defaults.general_rules || "")
+                )
+                    ? generalRulesEl.value
+                    : null;
+            }
+            if (hookRulesEl) {
+                script.hook_rules_override = (
+                    script.hook_rules_override !== null || hookRulesEl.value !== (uiState.defaults.hook_rules || "")
+                )
+                    ? hookRulesEl.value
+                    : null;
+            }
+            if (defaultCharactersEl) {
+                script.default_characters_override = (
+                    script.default_characters_override !== null || defaultCharactersEl.value !== (uiState.defaults.default_characters || "")
+                )
+                    ? defaultCharactersEl.value
+                    : null;
+            }
+            const activeRefinementRulesEl = refinementRulesEl || storyboardRefinementRulesEl;
+            if (activeRefinementRulesEl) {
+                script.refinement_rules_override = (
+                    script.refinement_rules_override !== null || activeRefinementRulesEl.value !== (uiState.defaults.refinement_rules || "")
+                )
+                    ? activeRefinementRulesEl.value
+                    : null;
+            }
+            if (setupIdeaEl) {
+                script.carousel_idea = setupIdeaEl.value;
+            }
+            if (storyboardIdeaEl) {
+                script.carousel_idea = storyboardIdeaEl.value;
+            }
+
+            if (Array.isArray(script.storyboard)) {
+                script.storyboard = script.storyboard.map((card, index) => {
+                    const hookEl = document.getElementById(`storyboard-hook-${index + 1}`);
+                    const visualEl = document.getElementById(`storyboard-visual-${index + 1}`);
+                    return {
+                        hook: hookEl ? hookEl.value : (card.hook || ""),
+                        visual_description: visualEl ? visualEl.value : (card.visual_description || ""),
+                    };
+                });
+            }
+
+            state.currentProject.script = script;
+        }
+
+        function setStoryboardNotesDraft(slideIndex, value) {
+            uiState.storyboardNotesDrafts[String(slideIndex)] = value;
+        }
+
+        function clearStoryboardNotesDraft(slideIndex) {
+            delete uiState.storyboardNotesDrafts[String(slideIndex)];
+        }
+
+        function remapStoryboardNotesDrafts(mapper) {
+            const nextDrafts = {};
+            Object.entries(uiState.storyboardNotesDrafts).forEach(([key, value]) => {
+                const nextIndex = mapper(Number(key));
+                if (Number.isInteger(nextIndex) && nextIndex > 0) {
+                    nextDrafts[String(nextIndex)] = value;
+                }
             });
-
-            appRootEl.querySelectorAll("[data-delete-slide]").forEach((button) => {
-                button.addEventListener("click", () => deleteSlideAt(Number(button.dataset.deleteSlide)));
-            });
-
-            const appendSlideBtn = document.getElementById("append-slide-btn");
-            if (appendSlideBtn) {
-                appendSlideBtn.addEventListener("click", () => appendSlide());
+            uiState.storyboardNotesDrafts = nextDrafts;
+            if (uiState.storyboardNotesOpenIndex !== null) {
+                const nextOpenIndex = mapper(uiState.storyboardNotesOpenIndex);
+                uiState.storyboardNotesOpenIndex = (
+                    Number.isInteger(nextOpenIndex) && nextOpenIndex > 0
+                        ? nextOpenIndex
+                        : null
+                );
             }
         }
 
+        function openStoryboardNotes(slideIndex) {
+            syncScriptDraftFromDom();
+            uiState.storyboardNotesOpenIndex = slideIndex;
+            renderApp();
+        }
+
+        function closeStoryboardNotes(slideIndex, {clearDraft = false} = {}) {
+            if (uiState.storyboardNotesOpenIndex === slideIndex) {
+                uiState.storyboardNotesOpenIndex = null;
+            }
+            if (clearDraft) {
+                clearStoryboardNotesDraft(slideIndex);
+            }
+            renderApp();
+        }
+
+        async function saveScriptState(showMessage = true, successMessage = "Script saved.") {
+            if (!state.currentProject) {
+                return;
+            }
+
+            syncScriptDraftFromDom();
+            const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}/script`, {
+                method: "PUT",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(buildScriptPayloadFromState()),
+            });
+            state.currentProject = data.project;
+            renderApp();
+            await loadProjects(state.currentProject.name, uiState.currentPage);
+            if (showMessage) {
+                setStatus(successMessage);
+            }
+        }
+
+        async function saveRuleAsGlobalDefault(ruleName) {
+            syncScriptDraftFromDom();
+            const fieldId = ruleName.replaceAll("_", "-");
+            const currentValue = document.getElementById(fieldId)?.value ?? getEffectiveRule(ruleName);
+            const nextDefaults = {
+                ...uiState.defaults,
+                [ruleName]: String(currentValue),
+            };
+            const data = await fetchJson("/api/defaults", {
+                method: "PUT",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(nextDefaults),
+            });
+            uiState.defaults = data.defaults;
+            uiState.defaultsLoaded = true;
+            setStatus("Global default saved.");
+            renderApp();
+        }
+
+        async function resetRuleOverride(ruleName) {
+            const script = getCurrentScriptState();
+            script[`${ruleName}_override`] = null;
+            state.currentProject.script = script;
+            await saveScriptState(false);
+            setStatus("Rule reset to global default.");
+        }
+
+        async function runStoryboardGeneration() {
+            if (uiState.storyboardGenerationInFlight) {
+                setStatus("Storyboard generation is already in progress.");
+                return;
+            }
+            syncScriptDraftFromDom();
+            const idea = getCurrentScriptState().carousel_idea || "";
+            if (!idea.trim()) {
+                setStatus("Carousel idea is required.", true);
+                return;
+            }
+
+            uiState.storyboardGenerationInFlight = true;
+            renderApp();
+            try {
+                setStatus("Generating storyboard...");
+                const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}/storyboard/generate`, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify(buildScriptPayloadFromState()),
+                });
+                state.currentProject = data.project;
+                renderApp();
+                await loadProjects(state.currentProject.name, uiState.currentPage);
+                setStatus("Storyboard generated.");
+            } finally {
+                uiState.storyboardGenerationInFlight = false;
+                renderApp();
+            }
+        }
+
+        async function regenerateStoryboardSlide(slideIndex, userNotes = "") {
+            syncScriptDraftFromDom();
+            const trimmedNotes = String(userNotes || "").trim();
+            setStatus(
+                trimmedNotes
+                    ? `Updating storyboard slide ${slideIndex} with user notes...`
+                    : `Regenerating storyboard slide ${slideIndex}...`
+            );
+            const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}/storyboard/regenerate/${slideIndex}`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    ...buildScriptPayloadFromState(),
+                    user_notes: userNotes,
+                }),
+            });
+            state.currentProject = data.project;
+            uiState.storyboardNotesOpenIndex = null;
+            clearStoryboardNotesDraft(slideIndex);
+            renderApp();
+            await loadProjects(state.currentProject.name, uiState.currentPage);
+            setStatus(
+                trimmedNotes
+                    ? `Storyboard slide ${slideIndex} updated with user notes.`
+                    : `Storyboard slide ${slideIndex} regenerated.`
+            );
+        }
+
+        async function refineStoryboardToEditor() {
+            syncScriptDraftFromDom();
+            setStatus("Refining storyboard into editor prompts...");
+            const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}/script/refine`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(buildScriptPayloadFromState()),
+            });
+            state.currentProject = data.project;
+            setCurrentPage("editor");
+            renderApp();
+            await loadProjects(state.currentProject.name, uiState.currentPage);
+            setStatus("Refined prompts are ready in the editor.");
+        }
+
+        async function addStoryboardSlide() {
+            syncScriptDraftFromDom();
+            const script = getCurrentScriptState();
+            script.storyboard.push({hook: "", visual_description: ""});
+            state.currentProject.script = script;
+            await saveScriptState(false);
+            setStatus("Added a storyboard slide.");
+        }
+
+        async function removeStoryboardSlide(slideIndex) {
+            syncScriptDraftFromDom();
+            const script = getCurrentScriptState();
+            if (script.storyboard.length <= 1) {
+                setStatus("At least one storyboard slide is required.", true);
+                return;
+            }
+            script.storyboard.splice(slideIndex - 1, 1);
+            state.currentProject.script = script;
+            remapStoryboardNotesDrafts((index) => {
+                if (index === slideIndex) {
+                    return null;
+                }
+                return index > slideIndex ? index - 1 : index;
+            });
+            await saveScriptState(false);
+            setStatus(`Removed storyboard slide ${slideIndex}.`);
+        }
+
+        async function persistStoryboardOrder() {
+            await saveScriptState(false);
+            setStatus("Storyboard order updated.");
+        }
+
+        function moveStoryboardCard(fromIndex, toIndex) {
+            if (fromIndex === toIndex || fromIndex < 1 || toIndex < 1) {
+                return;
+            }
+            const script = getCurrentScriptState();
+            const cards = [...script.storyboard];
+            const [movedCard] = cards.splice(fromIndex - 1, 1);
+            cards.splice(toIndex - 1, 0, movedCard);
+            script.storyboard = cards;
+            state.currentProject.script = script;
+            remapStoryboardNotesDrafts((index) => {
+                if (index === fromIndex) {
+                    return toIndex;
+                }
+                if (fromIndex < toIndex && index > fromIndex && index <= toIndex) {
+                    return index - 1;
+                }
+                if (fromIndex > toIndex && index >= toIndex && index < fromIndex) {
+                    return index + 1;
+                }
+                return index;
+            });
+        }
+
+        function bindScriptWriterActions() {
+            const skipBtn = document.getElementById("skip-to-editor-btn");
+            if (skipBtn) {
+                skipBtn.addEventListener("click", () => {
+                    setCurrentPage("editor");
+                    renderApp();
+                    setStatus("Opened editor without saving script data.");
+                });
+            }
+
+            const toggleAdvancedBtn = document.getElementById("toggle-advanced-rules-btn");
+            if (toggleAdvancedBtn) {
+                toggleAdvancedBtn.addEventListener("click", () => {
+                    syncScriptDraftFromDom();
+                    uiState.showAdvancedRules = !uiState.showAdvancedRules;
+                    renderApp();
+                });
+            }
+
+            appRootEl.querySelectorAll("[data-toggle-script-rule]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    syncScriptDraftFromDom();
+                    const ruleName = button.dataset.toggleScriptRule;
+                    uiState.expandedScriptRuleEditors[ruleName] = !uiState.expandedScriptRuleEditors[ruleName];
+                    renderApp();
+                });
+            });
+
+            const generateStoryboardBtn = document.getElementById("generate-storyboard-btn");
+            if (generateStoryboardBtn) {
+                generateStoryboardBtn.addEventListener("click", async () => {
+                    try {
+                        await runStoryboardGeneration();
+                    } catch (error) {
+                        setStatus(error.message || "Storyboard generation failed.", true);
+                    }
+                });
+            }
+
+            const regenerateStoryboardBtn = document.getElementById("regenerate-storyboard-btn");
+            if (regenerateStoryboardBtn) {
+                regenerateStoryboardBtn.addEventListener("click", async () => {
+                    if (!window.confirm("Regenerate the full storyboard? This will overwrite all storyboard slides.")) {
+                        return;
+                    }
+                    try {
+                        await runStoryboardGeneration();
+                    } catch (error) {
+                        setStatus(error.message || "Storyboard regeneration failed.", true);
+                    }
+                });
+            }
+
+            const refineStoryboardBtn = document.getElementById("refine-storyboard-btn");
+            if (refineStoryboardBtn) {
+                refineStoryboardBtn.addEventListener("click", async () => {
+                    try {
+                        await refineStoryboardToEditor();
+                    } catch (error) {
+                        setStatus(error.message || "Storyboard refinement failed.", true);
+                    }
+                });
+            }
+
+            const addStoryboardSlideBtn = document.getElementById("add-storyboard-slide-btn");
+            if (addStoryboardSlideBtn) {
+                addStoryboardSlideBtn.addEventListener("click", async () => {
+                    try {
+                        await addStoryboardSlide();
+                    } catch (error) {
+                        setStatus(error.message || "Could not add storyboard slide.", true);
+                    }
+                });
+            }
+
+            appRootEl.querySelectorAll("[data-reset-rule]").forEach((button) => {
+                button.addEventListener("click", async () => {
+                    try {
+                        await resetRuleOverride(button.dataset.resetRule);
+                    } catch (error) {
+                        setStatus(error.message || "Could not reset the rule override.", true);
+                    }
+                });
+            });
+
+            appRootEl.querySelectorAll("[data-save-rule-global]").forEach((button) => {
+                button.addEventListener("click", async () => {
+                    try {
+                        await saveRuleAsGlobalDefault(button.dataset.saveRuleGlobal);
+                    } catch (error) {
+                        setStatus(error.message || "Could not save the global default.", true);
+                    }
+                });
+            });
+
+            appRootEl.querySelectorAll("[data-toggle-storyboard-notes]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    openStoryboardNotes(Number(button.dataset.toggleStoryboardNotes));
+                });
+            });
+
+            appRootEl.querySelectorAll("[data-storyboard-notes-input]").forEach((textarea) => {
+                textarea.addEventListener("input", () => {
+                    setStoryboardNotesDraft(Number(textarea.dataset.storyboardNotesInput), textarea.value);
+                });
+            });
+
+            appRootEl.querySelectorAll("[data-submit-storyboard-notes]").forEach((button) => {
+                button.addEventListener("click", async () => {
+                    const slideIndex = Number(button.dataset.submitStoryboardNotes);
+                    try {
+                        await regenerateStoryboardSlide(
+                            slideIndex,
+                            uiState.storyboardNotesDrafts[String(slideIndex)] || ""
+                        );
+                    } catch (error) {
+                        setStatus(error.message || "Could not update the storyboard slide with user notes.", true);
+                    }
+                });
+            });
+
+            appRootEl.querySelectorAll("[data-cancel-storyboard-notes]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    closeStoryboardNotes(Number(button.dataset.cancelStoryboardNotes), {clearDraft: true});
+                });
+            });
+
+            appRootEl.querySelectorAll("[data-remove-storyboard-slide]").forEach((button) => {
+                button.addEventListener("click", async () => {
+                    try {
+                        await removeStoryboardSlide(Number(button.dataset.removeStoryboardSlide));
+                    } catch (error) {
+                        setStatus(error.message || "Could not remove the storyboard slide.", true);
+                    }
+                });
+            });
+
+            appRootEl.querySelectorAll("[data-storyboard-card]").forEach((cardEl) => {
+                const cardIndex = Number(cardEl.dataset.storyboardCard);
+                cardEl.addEventListener("dragstart", () => {
+                    syncScriptDraftFromDom();
+                    uiState.draggingStoryboardIndex = cardIndex;
+                    cardEl.classList.add("dragging");
+                });
+                cardEl.addEventListener("dragend", () => {
+                    uiState.draggingStoryboardIndex = null;
+                    cardEl.classList.remove("dragging");
+                });
+                cardEl.addEventListener("dragover", (event) => {
+                    event.preventDefault();
+                });
+                cardEl.addEventListener("drop", async (event) => {
+                    event.preventDefault();
+                    const fromIndex = uiState.draggingStoryboardIndex;
+                    if (!fromIndex || fromIndex === cardIndex) {
+                        return;
+                    }
+                    moveStoryboardCard(fromIndex, cardIndex);
+                    uiState.draggingStoryboardIndex = null;
+                    renderApp();
+                    try {
+                        await persistStoryboardOrder();
+                    } catch (error) {
+                        setStatus(error.message || "Could not update storyboard order.", true);
+                    }
+                });
+            });
+        }
+
         function bindModalActions() {
+            const goToScriptWriterBtn = document.getElementById("go-to-script-writer-btn");
+            if (goToScriptWriterBtn) {
+                goToScriptWriterBtn.addEventListener("click", async () => {
+                    syncDraftFromDom();
+                    await ensureDefaultsLoaded();
+                    setCurrentPage("script");
+                    renderApp();
+                });
+            }
+
+            const openSettingsBtn = document.getElementById("open-global-settings-btn");
+            if (openSettingsBtn) {
+                openSettingsBtn.addEventListener("click", async () => {
+                    if (uiState.currentPage === "script") {
+                        syncScriptDraftFromDom();
+                    }
+                    await ensureDefaultsLoaded(true);
+                    uiState.settingsModalOpen = true;
+                    renderApp();
+                });
+            }
+
             appRootEl.querySelectorAll("[data-open-image-modal]").forEach((button) => {
                 button.addEventListener("click", () => {
                     openImageModal(button.dataset.imageSrc, button.dataset.openImageModal);
@@ -1515,6 +2595,50 @@
                     }
                 });
             }
+
+            const closeSettingsBtn = document.getElementById("close-settings-modal-btn");
+            if (closeSettingsBtn) {
+                closeSettingsBtn.addEventListener("click", () => {
+                    uiState.settingsModalOpen = false;
+                    renderApp();
+                });
+            }
+
+            const settingsOverlay = document.getElementById("settings-modal-overlay");
+            if (settingsOverlay) {
+                settingsOverlay.addEventListener("click", (event) => {
+                    if (event.target === settingsOverlay) {
+                        uiState.settingsModalOpen = false;
+                        renderApp();
+                    }
+                });
+            }
+
+            const saveGlobalSettingsBtn = document.getElementById("save-global-settings-btn");
+            if (saveGlobalSettingsBtn) {
+                saveGlobalSettingsBtn.addEventListener("click", async () => {
+                    try {
+                        const nextDefaults = {
+                            general_rules: document.getElementById("global-general-rules")?.value || "",
+                            hook_rules: document.getElementById("global-hook-rules")?.value || "",
+                            default_characters: document.getElementById("global-default-characters")?.value || "",
+                            refinement_rules: document.getElementById("global-refinement-rules")?.value || "",
+                        };
+                        const data = await fetchJson("/api/defaults", {
+                            method: "PUT",
+                            headers: {"Content-Type": "application/json"},
+                            body: JSON.stringify(nextDefaults),
+                        });
+                        uiState.defaults = data.defaults;
+                        uiState.defaultsLoaded = true;
+                        uiState.settingsModalOpen = false;
+                        renderApp();
+                        setStatus("Global defaults updated.");
+                    } catch (error) {
+                        setStatus(error.message || "Could not save global defaults.", true);
+                    }
+                });
+            }
         }
 
         function bindProjectDeleteActions() {
@@ -1527,14 +2651,36 @@
 
         function bindImageActions() {
             const fixedInput = document.getElementById("fixed-images-input");
-            if (!fixedInput) {
-                return;
+            if (fixedInput) {
+                document.getElementById("fixed-images-add-btn").addEventListener("click", () => fixedInput.click());
+                fixedInput.addEventListener("change", async () => {
+                    await uploadImages(Array.from(fixedInput.files || []), "fixed");
+                    fixedInput.value = "";
+                });
             }
-            document.getElementById("fixed-images-add-btn").addEventListener("click", () => fixedInput.click());
-            fixedInput.addEventListener("change", async () => {
-                await uploadImages(Array.from(fixedInput.files || []), "fixed");
-                fixedInput.value = "";
-            });
+
+            const scriptCharacterInput = document.getElementById("script-character-images-input");
+            const scriptCharacterAddBtn = document.getElementById("script-character-images-add-btn");
+            if (scriptCharacterInput && scriptCharacterAddBtn) {
+                scriptCharacterAddBtn.addEventListener("click", () => scriptCharacterInput.click());
+                scriptCharacterInput.addEventListener("change", async () => {
+                    await uploadImages(Array.from(scriptCharacterInput.files || []), "script_character");
+                    scriptCharacterInput.value = "";
+                });
+            }
+
+            const defaultCharactersEl = document.getElementById("default-characters");
+            if (defaultCharactersEl) {
+                defaultCharactersEl.addEventListener("paste", async (event) => {
+                    const imageFile = getImageFileFromClipboard(event);
+                    if (!imageFile) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    await uploadImages([imageFile], "script_character");
+                });
+            }
 
             appRootEl.querySelectorAll("[data-open-slide-input]").forEach((button) => {
                 const slideIndex = Number(button.dataset.openSlideInput);
@@ -1603,7 +2749,6 @@
 
             const aspectRatioEl = document.getElementById("aspect-ratio");
             const resolutionEl = document.getElementById("resolution");
-            const pageCountEl = document.getElementById("page-count");
             const fixedTextEl = document.getElementById("fixed-text-prompt");
 
             if (aspectRatioEl) {
@@ -1612,10 +2757,7 @@
             if (resolutionEl) {
                 state.currentProject.resolution = resolutionEl.value;
             }
-            if (pageCountEl) {
-                const value = Number(pageCountEl.value || state.currentProject.page_count || 1);
-                state.currentProject.page_count = Math.max(1, Math.min(50, value));
-            }
+            state.currentProject.page_count = state.currentProject.slides.length;
             if (fixedTextEl) {
                 state.currentProject.fixed_text_prompt = fixedTextEl.value;
             }
@@ -1628,7 +2770,8 @@
                     slide.prompt = promptEl.value;
                 }
                 if (fixedTextOverrideEl) {
-                    slide.fixed_text_prompt_override = fixedTextOverrideEl.value;
+                    const normalized = fixedTextOverrideEl.value.trim();
+                    slide.fixed_text_prompt_override = normalized ? fixedTextOverrideEl.value : null;
                 }
             });
         }
@@ -1654,18 +2797,7 @@
         }
 
         function applyPendingPageCountToSlides() {
-            const rawCount = Number(state.currentProject.page_count || state.currentProject.slides.length || 1);
-            const targetCount = Math.max(1, Math.min(50, rawCount));
-            state.currentProject.page_count = targetCount;
-
-            while (state.currentProject.slides.length < targetCount) {
-                state.currentProject.slides.push(createEmptySlide());
-            }
-
-            if (state.currentProject.slides.length > targetCount) {
-                state.currentProject.slides = state.currentProject.slides.slice(0, targetCount);
-            }
-
+            state.currentProject.page_count = state.currentProject.slides.length;
             reindexLocalSlides();
         }
 
@@ -1701,7 +2833,7 @@
             });
             state.currentProject = data.project;
             renderApp();
-            await loadProjects(state.currentProject.name);
+            await loadProjects(state.currentProject.name, uiState.currentPage);
             if (showMessage) {
                 setStatus(successMessage);
             } else {
@@ -1735,7 +2867,7 @@
             });
             state.currentProject = data.project;
             renderApp();
-            await loadProjects(state.currentProject.name);
+            await loadProjects(state.currentProject.name, uiState.currentPage);
             setStatus(successMessage);
         }
 
@@ -1767,8 +2899,13 @@
                 return;
             }
 
-            syncDraftFromDom();
-            await saveProject(false);
+            if (target === "script_character") {
+                syncScriptDraftFromDom();
+                await saveScriptState(false, "");
+            } else {
+                syncDraftFromDom();
+                await saveProject(false);
+            }
             setStatus("Uploading image assets...");
             for (const file of files) {
                 const formData = new FormData();
@@ -1791,7 +2928,7 @@
             }
 
             renderApp();
-            await loadProjects(state.currentProject.name);
+            await loadProjects(state.currentProject.name, uiState.currentPage);
             setStatus("Image uploaded.");
         }
 
@@ -1857,7 +2994,7 @@
                 clearGenerationController(slideIndex);
                 clearSlideFeedback(slideIndex);
                 renderApp();
-                await loadProjects(state.currentProject.name);
+                await loadProjects(state.currentProject.name, uiState.currentPage);
                 setStatus(`Slide ${slideIndex} generated.`);
             } catch (error) {
                 clearGenerationController(slideIndex);
@@ -1908,7 +3045,7 @@
                 clearGenerationController(slideIndex);
                 clearSlideFeedback(slideIndex);
                 renderApp();
-                await loadProjects(state.currentProject.name);
+                await loadProjects(state.currentProject.name, uiState.currentPage);
                 setStatus(`Slide ${slideIndex} updated.`);
             } catch (error) {
                 clearGenerationController(slideIndex);
@@ -1937,10 +3074,13 @@
                 setStatus("Background generation is already running.", true);
                 return;
             }
-            await saveProject(false);
+            syncDraftFromDom();
+            applyPendingPageCountToSlides();
             setStatus("Starting background generation...");
             const data = await fetchJson(`/api/projects/${encodeURIComponent(state.currentProject.name)}/generate-all`, {
                 method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(buildProjectPayload()),
             });
             state.currentProject = data.project;
             renderApp();
@@ -1982,7 +3122,9 @@
             });
 
             state.currentProject = data.project;
-            await loadProjects(state.currentProject.name);
+            setCurrentPage("script");
+            await ensureDefaultsLoaded();
+            await loadProjects(state.currentProject.name, uiState.currentPage);
             setStatus("Project created.");
         }
 

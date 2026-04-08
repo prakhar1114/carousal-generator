@@ -20,9 +20,12 @@ from PIL import Image, UnidentifiedImageError
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECTS_DIR = BASE_DIR / "projects"
+DEFAULTS_PATH = BASE_DIR / "defaults.json"
 DEFAULT_ASPECT_RATIO = "1:1"
 DEFAULT_RESOLUTION = "1K"
 DEFAULT_PAGE_COUNT = 5
+IMAGE_GENERATION_MODEL = "gemini-3-pro-image-preview"
+SCRIPT_WRITER_MODEL = "gemini-3.1-pro-preview"
 ALLOWED_ASPECT_RATIOS = {"1:1", "4:5", "9:16", "16:9", "21:9", "3:4"}
 ALLOWED_RESOLUTIONS = {"1K", "2K", "4K"}
 BATCH_ACTIVE_STATES = {"queued", "running", "cancelling"}
@@ -118,6 +121,100 @@ def default_slide(index: int) -> dict[str, Any]:
     }
 
 
+def default_script_state() -> dict[str, Any]:
+    return {
+        "general_rules_override": None,
+        "hook_rules_override": None,
+        "default_characters_override": None,
+        "refinement_rules_override": None,
+        "carousel_idea": "",
+        "character_reference_images": [],
+        "storyboard": [],
+    }
+
+
+def default_global_defaults() -> dict[str, str]:
+    return {
+        "general_rules": "",
+        "hook_rules": "",
+        "default_characters": "",
+        "refinement_rules": "",
+    }
+
+
+def normalize_optional_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value)
+
+
+def normalize_storyboard_card(raw_card: Any) -> dict[str, str]:
+    card = raw_card if isinstance(raw_card, dict) else {}
+    return {
+        "hook": str(card.get("hook", "")),
+        "visual_description": str(card.get("visual_description", "")),
+    }
+
+
+def normalize_script_state(raw_script: Any) -> dict[str, Any]:
+    script = raw_script if isinstance(raw_script, dict) else {}
+    return {
+        "general_rules_override": normalize_optional_text(script.get("general_rules_override")),
+        "hook_rules_override": normalize_optional_text(script.get("hook_rules_override")),
+        "default_characters_override": normalize_optional_text(script.get("default_characters_override")),
+        "refinement_rules_override": normalize_optional_text(script.get("refinement_rules_override")),
+        "carousel_idea": str(script.get("carousel_idea", "")),
+        "character_reference_images": [str(image) for image in script.get("character_reference_images", [])],
+        "storyboard": [normalize_storyboard_card(card) for card in script.get("storyboard", [])],
+    }
+
+
+def script_has_meaningful_content(raw_script: Any) -> bool:
+    script = normalize_script_state(raw_script)
+    if script["general_rules_override"] is not None:
+        return True
+    if script["hook_rules_override"] is not None:
+        return True
+    if script["default_characters_override"] is not None:
+        return True
+    if script["refinement_rules_override"] is not None:
+        return True
+    if script["carousel_idea"].strip():
+        return True
+    if script["character_reference_images"]:
+        return True
+    return any(
+        card["hook"].strip() or card["visual_description"].strip()
+        for card in script["storyboard"]
+    )
+
+
+def normalize_global_defaults(raw_defaults: Any) -> dict[str, str]:
+    source = raw_defaults if isinstance(raw_defaults, dict) else {}
+    defaults = default_global_defaults()
+    for key in defaults:
+        defaults[key] = str(source.get(key, "") or "")
+    return defaults
+
+
+def load_global_defaults() -> dict[str, str]:
+    if not DEFAULTS_PATH.exists():
+        return default_global_defaults()
+
+    try:
+        payload = json.loads(DEFAULTS_PATH.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return default_global_defaults()
+
+    return normalize_global_defaults(payload)
+
+
+def save_global_defaults(defaults: Any) -> dict[str, str]:
+    normalized = normalize_global_defaults(defaults)
+    DEFAULTS_PATH.write_text(json.dumps(normalized, indent=2), encoding="utf-8")
+    return normalized
+
+
 def project_dir(project_name: str) -> Path:
     name = slugify_project_name(project_name)
     path = (PROJECTS_DIR / name).resolve()
@@ -138,16 +235,20 @@ def create_project_payload(
     fixed_text_prompt: str = "",
 ) -> dict[str, Any]:
     timestamp = now_iso()
+    initial_fixed_text_prompt = str(fixed_text_prompt or "")
+    if not initial_fixed_text_prompt.strip():
+        initial_fixed_text_prompt = load_global_defaults().get("default_characters", "")
     return {
         "name": slugify_project_name(name),
         "created_at": timestamp,
         "updated_at": timestamp,
         "aspect_ratio": validate_aspect_ratio(aspect_ratio),
         "resolution": validate_resolution(resolution),
-        "fixed_text_prompt": str(fixed_text_prompt or ""),
+        "fixed_text_prompt": initial_fixed_text_prompt,
         "fixed_images": [],
         "slides": [default_slide(i) for i in range(1, coerce_page_count(page_count) + 1)],
         "batch_generation": default_batch_generation(page_count),
+        "script": default_script_state(),
     }
 
 
@@ -157,7 +258,12 @@ def save_project(project: dict[str, Any]) -> None:
         folder = project_dir(name)
         folder.mkdir(exist_ok=True)
         project["updated_at"] = now_iso()
-        project_json_path(name).write_text(json.dumps(project, indent=2), encoding="utf-8")
+        project_to_write = deepcopy(project)
+        if script_has_meaningful_content(project_to_write.get("script")):
+            project_to_write["script"] = normalize_script_state(project_to_write.get("script"))
+        else:
+            project_to_write.pop("script", None)
+        project_json_path(name).write_text(json.dumps(project_to_write, indent=2), encoding="utf-8")
 
 
 def project_folder_has_assets(folder: Path) -> bool:
@@ -184,6 +290,9 @@ def project_has_meaningful_content(project: dict[str, Any]) -> bool:
         if slide.get("generated"):
             return True
 
+    if script_has_meaningful_content(project.get("script")):
+        return True
+
     return False
 
 
@@ -205,6 +314,7 @@ def invalid_project_stub(project_name: str, project_error: str, has_assets: bool
         "fixed_text_prompt": "",
         "fixed_images": [],
         "slides": [],
+        "script": default_script_state(),
         "page_count": 0,
         "batch_generation": default_batch_generation(1),
         "is_valid": False,
@@ -302,6 +412,7 @@ def load_project(project_name: str) -> dict[str, Any]:
         project["fixed_text_prompt"] = str(project.get("fixed_text_prompt", ""))
         project["aspect_ratio"] = validate_aspect_ratio(project.get("aspect_ratio", DEFAULT_ASPECT_RATIO))
         project["resolution"] = validate_resolution(project.get("resolution", DEFAULT_RESOLUTION))
+        project["script"] = normalize_script_state(project.get("script"))
         project["batch_generation"] = normalize_batch_generation(project)
         return project
 
@@ -419,6 +530,7 @@ def resequence_slide_assets(project: dict[str, Any]) -> None:
 def serialize_project(project: dict[str, Any]) -> dict[str, Any]:
     payload = deepcopy(project)
     payload["page_count"] = len(payload.get("slides", []))
+    payload["script"] = normalize_script_state(payload.get("script"))
     payload["batch_generation"] = normalize_batch_generation(payload)
     for slide in payload["slides"]:
         slide["effective_fixed_text"] = effective_fixed_text(project, slide)
@@ -431,6 +543,10 @@ def serialize_project(project: dict[str, Any]) -> dict[str, Any]:
         filename: f"/projects/{payload['name']}/{filename}?t={payload['updated_at']}"
         for filename in payload.get("fixed_images", [])
     }
+    payload["script_character_image_urls"] = {
+        filename: f"/projects/{payload['name']}/{filename}?t={payload['updated_at']}"
+        for filename in payload["script"].get("character_reference_images", [])
+    }
     folder = project_dir(payload["name"])
     has_assets = project_folder_has_assets(folder)
     is_empty = not has_assets and not project_has_meaningful_content(project)
@@ -440,6 +556,10 @@ def serialize_project(project: dict[str, Any]) -> dict[str, Any]:
     payload["is_empty"] = is_empty
     payload["delete_requires_confirmation"] = not is_empty
     payload["delete_warning"] = project_delete_warning(has_assets) if not is_empty else ""
+    payload["editor_ready"] = bool(payload["slides"]) and all(
+        str(slide.get("prompt", "")).strip() for slide in payload["slides"]
+    )
+    payload["has_storyboard"] = bool(payload["script"].get("storyboard"))
     return payload
 
 
@@ -455,6 +575,7 @@ def project_list_entry_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "has_assets": payload.get("has_assets", False),
         "delete_requires_confirmation": payload.get("delete_requires_confirmation", True),
         "delete_warning": payload.get("delete_warning", ""),
+        "editor_ready": payload.get("editor_ready", False),
     }
 
 
@@ -697,6 +818,7 @@ def next_available_asset_name(
     prefix: str,
 ) -> str:
     used_names = set(project.get("fixed_images", []))
+    used_names.update(normalize_script_state(project.get("script")).get("character_reference_images", []))
     for slide in project.get("slides", []):
         used_names.update(slide.get("images", []))
 
@@ -745,19 +867,24 @@ def save_uploaded_asset(project: dict[str, Any], target: str, slide_index: int |
     image = load_image_from_bytes(image_bytes_from_request())
     if target == "fixed":
         filename = next_available_asset_name(project, "fixed_img_")
+    elif target == "script_character":
+        filename = next_available_asset_name(project, "script_character_img_")
     elif target == "slide":
         if slide_index is None:
             raise ProjectError("slide_index is required for slide uploads.")
         get_slide(project, slide_index)
         filename = next_available_asset_name(project, f"slide_{slide_index}_img_")
     else:
-        raise ProjectError("Target must be either 'fixed' or 'slide'.")
+        raise ProjectError("Target must be one of 'fixed', 'script_character', or 'slide'.")
 
     output_path = project_dir(project["name"]) / filename
     image.save(output_path, format="PNG")
 
     if target == "fixed":
         project["fixed_images"].append(filename)
+    elif target == "script_character":
+        project["script"] = normalize_script_state(project.get("script"))
+        project["script"]["character_reference_images"].append(filename)
     else:
         slide = get_slide(project, slide_index or 1)
         slide["images"].append(filename)
@@ -770,6 +897,14 @@ def delete_asset(project: dict[str, Any], filename: str) -> None:
     removed = False
     if filename in project.get("fixed_images", []):
         project["fixed_images"] = [item for item in project["fixed_images"] if item != filename]
+        removed = True
+
+    script = normalize_script_state(project.get("script"))
+    if filename in script.get("character_reference_images", []):
+        script["character_reference_images"] = [
+            item for item in script["character_reference_images"] if item != filename
+        ]
+        project["script"] = script
         removed = True
 
     for slide in project.get("slides", []):
@@ -828,6 +963,322 @@ def get_gemini_client():
         raise ProjectError("google-genai is not installed. Run pip install -r requirements.txt.") from exc
 
     return genai.Client(api_key=api_key)
+
+
+def build_text_json_config(response_schema: Any):
+    try:
+        from google.genai import types
+    except ImportError as exc:
+        raise ProjectError("google-genai is not installed. Run pip install -r requirements.txt.") from exc
+
+    return types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_json_schema=response_schema,
+    )
+
+
+def extract_text_response(response: Any) -> str:
+    text = getattr(response, "text", None)
+    if text:
+        return str(text)
+
+    candidate_parts = []
+    if hasattr(response, "parts") and response.parts:
+        candidate_parts = response.parts
+    elif hasattr(response, "candidates") and response.candidates:
+        for candidate in response.candidates:
+            content = getattr(candidate, "content", None)
+            if content and getattr(content, "parts", None):
+                candidate_parts.extend(content.parts)
+
+    chunks: list[str] = []
+    for part in candidate_parts:
+        part_text = getattr(part, "text", None)
+        if part_text:
+            chunks.append(str(part_text))
+
+    return "".join(chunks).strip()
+
+
+def parse_json_response(response: Any) -> Any:
+    parsed = getattr(response, "parsed", None)
+    if parsed is not None:
+        return parsed
+
+    raw_text = extract_text_response(response)
+    if not raw_text:
+        raise ProjectError("Gemini returned an empty JSON response.")
+
+    try:
+        return json.loads(raw_text)
+    except json.JSONDecodeError as exc:
+        raise ProjectError("Gemini returned invalid JSON.") from exc
+
+
+def storyboard_card_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {
+            "hook": {"type": "string"},
+            "visual_description": {"type": "string"},
+        },
+        "required": ["hook", "visual_description"],
+    }
+
+
+def effective_script_rules(project: dict[str, Any], defaults: dict[str, str] | None = None) -> dict[str, str]:
+    script = normalize_script_state(project.get("script"))
+    source_defaults = defaults or load_global_defaults()
+    return {
+        "general_rules": (
+            script["general_rules_override"]
+            if script["general_rules_override"] is not None
+            else source_defaults["general_rules"]
+        ),
+        "hook_rules": (
+            script["hook_rules_override"]
+            if script["hook_rules_override"] is not None
+            else source_defaults["hook_rules"]
+        ),
+        "default_characters": (
+            script["default_characters_override"]
+            if script["default_characters_override"] is not None
+            else source_defaults["default_characters"]
+        ),
+        "refinement_rules": (
+            script["refinement_rules_override"]
+            if script["refinement_rules_override"] is not None
+            else source_defaults["refinement_rules"]
+        ),
+    }
+
+
+def sync_project_fixed_text_prompt(project: dict[str, Any], previous_effective_characters: str | None = None) -> None:
+    fixed_text = str(project.get("fixed_text_prompt", "") or "")
+    next_effective_characters = effective_script_rules(project)["default_characters"]
+
+    if not next_effective_characters.strip():
+        return
+
+    if not fixed_text.strip():
+        project["fixed_text_prompt"] = next_effective_characters
+        return
+
+    if previous_effective_characters is not None and fixed_text == previous_effective_characters:
+        project["fixed_text_prompt"] = next_effective_characters
+
+
+def apply_script_update(project: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    script = normalize_script_state(project.get("script"))
+    previous_effective_characters = effective_script_rules(project)["default_characters"]
+
+    if "general_rules_override" in payload:
+        script["general_rules_override"] = normalize_optional_text(payload.get("general_rules_override"))
+    if "hook_rules_override" in payload:
+        script["hook_rules_override"] = normalize_optional_text(payload.get("hook_rules_override"))
+    if "default_characters_override" in payload:
+        script["default_characters_override"] = normalize_optional_text(payload.get("default_characters_override"))
+    if "refinement_rules_override" in payload:
+        script["refinement_rules_override"] = normalize_optional_text(payload.get("refinement_rules_override"))
+    if "carousel_idea" in payload:
+        script["carousel_idea"] = str(payload.get("carousel_idea", ""))
+    if "character_reference_images" in payload:
+        character_reference_images = payload.get("character_reference_images")
+        if not isinstance(character_reference_images, list):
+            raise ProjectError("character_reference_images must be an array.")
+        script["character_reference_images"] = [str(image) for image in character_reference_images]
+    if "storyboard" in payload:
+        storyboard = payload.get("storyboard")
+        if not isinstance(storyboard, list):
+            raise ProjectError("storyboard must be an array.")
+        script["storyboard"] = [normalize_storyboard_card(card) for card in storyboard]
+        if script["storyboard"]:
+            sync_slide_count(project, len(script["storyboard"]))
+
+    project["script"] = script
+    sync_project_fixed_text_prompt(project, previous_effective_characters)
+    return project
+
+
+def build_storyboard_prompt(
+    carousel_idea: str,
+    general_rules: str,
+    hook_rules: str,
+    default_characters: str,
+    page_count: int,
+) -> str:
+    return (
+        "You are writing a carousel storyboard.\n"
+        "Return exactly one storyboard card per slide.\n"
+        "Each card needs a short hook and a brief visual description.\n\n"
+        f"Carousel idea:\n{carousel_idea.strip()}\n\n"
+        f"General rules:\n{general_rules.strip() or '(none)'}\n\n"
+        f"Character style and recurring cast:\n{default_characters.strip() or '(none)'}\n\n"
+        "If character reference images are attached, treat them as the source of truth for recurring character design, comic style, and visual continuity.\n\n"
+        "Slide 1 hook rules:\n"
+        f"{hook_rules.strip() or '(none)'}\n\n"
+        f"Create exactly {page_count} slides.\n"
+        "Slide 1 should follow the hook rules. Slides 2+ should follow only the general rules.\n"
+        "Use the same recurring characters and art style across the full carousel.\n"
+        "Keep hook text concise and visually strong. Keep visual descriptions to 1-2 lines."
+    )
+
+
+def build_single_slide_storyboard_prompt(
+    carousel_idea: str,
+    general_rules: str,
+    hook_rules: str,
+    default_characters: str,
+    slide_index: int,
+    page_count: int,
+    user_notes: str = "",
+) -> str:
+    hook_section = (
+        f"Hook rules for this slide:\n{hook_rules.strip() or '(none)'}\n\n"
+        if slide_index == 1
+        else ""
+    )
+    notes_section = (
+        f"User notes for this slide update:\n{user_notes.strip()}\n\n"
+        if user_notes.strip()
+        else ""
+    )
+    return (
+        "You are rewriting one carousel storyboard slide.\n"
+        "Return one object with hook and visual_description.\n\n"
+        f"Carousel idea:\n{carousel_idea.strip()}\n\n"
+        f"General rules:\n{general_rules.strip() or '(none)'}\n\n"
+        f"Character style and recurring cast:\n{default_characters.strip() or '(none)'}\n\n"
+        "If character reference images are attached, treat them as the source of truth for recurring character design, comic style, and visual continuity.\n\n"
+        f"Slide position: {slide_index} of {page_count}\n\n"
+        f"{hook_section}"
+        f"{notes_section}"
+        "Do not use other slides as context. Only write this slide.\n"
+        "Use the same recurring characters and art style already established for the carousel.\n"
+        "If user notes are provided, follow them for this slide while still respecting the carousel idea and visual continuity.\n"
+        "Keep hook text concise and visually strong. Keep visual descriptions to 1-2 lines."
+    )
+
+
+def build_refinement_prompt(
+    hook: str,
+    visual_description: str,
+    default_characters: str,
+    refinement_rules: str,
+) -> str:
+    return (
+        "Expand this storyboard card into one detailed Nano Banana image prompt.\n"
+        "Return plain text only.\n\n"
+        f"Hook:\n{hook.strip()}\n\n"
+        f"Visual description:\n{visual_description.strip()}\n\n"
+        f"Character style and recurring cast:\n{default_characters.strip() or '(none)'}\n\n"
+        "If character reference images are attached, they define the character design, styling, and continuity you should preserve.\n\n"
+        f"Refinement rules:\n{refinement_rules.strip() or '(none)'}\n\n"
+        "Write one rich production-ready image prompt with subject, composition, framing, lighting, style, mood, and key details."
+    )
+
+
+def script_reference_images(project: dict[str, Any]) -> list[Image.Image]:
+    script = normalize_script_state(project.get("script"))
+    return [
+        open_project_image(project["name"], filename)
+        for filename in script.get("character_reference_images", [])
+    ]
+
+
+def generate_storyboard_cards(
+    project: dict[str, Any],
+    carousel_idea: str,
+    general_rules: str,
+    hook_rules: str,
+    default_characters: str,
+    page_count: int,
+) -> list[dict[str, str]]:
+    client = get_gemini_client()
+    response = client.models.generate_content(
+        model=SCRIPT_WRITER_MODEL,
+        contents=[
+            *script_reference_images(project),
+            build_storyboard_prompt(
+                carousel_idea,
+                general_rules,
+                hook_rules,
+                default_characters,
+                page_count,
+            ),
+        ],
+        config=build_text_json_config(
+            {
+                "type": "array",
+                "minItems": page_count,
+                "maxItems": page_count,
+                "items": storyboard_card_schema(),
+            }
+        ),
+    )
+    payload = parse_json_response(response)
+    if not isinstance(payload, list):
+        raise ProjectError("Gemini returned an invalid storyboard response.")
+    normalized = [normalize_storyboard_card(card) for card in payload]
+    if len(normalized) != page_count:
+        raise ProjectError("Gemini returned the wrong number of storyboard slides.")
+    return normalized
+
+
+def generate_storyboard_card(
+    project: dict[str, Any],
+    carousel_idea: str,
+    general_rules: str,
+    hook_rules: str,
+    default_characters: str,
+    slide_index: int,
+    page_count: int,
+    user_notes: str = "",
+) -> dict[str, str]:
+    client = get_gemini_client()
+    response = client.models.generate_content(
+        model=SCRIPT_WRITER_MODEL,
+        contents=[
+            *script_reference_images(project),
+            build_single_slide_storyboard_prompt(
+                carousel_idea,
+                general_rules,
+                hook_rules,
+                default_characters,
+                slide_index,
+                page_count,
+                user_notes,
+            ),
+        ],
+        config=build_text_json_config(storyboard_card_schema()),
+    )
+    return normalize_storyboard_card(parse_json_response(response))
+
+
+def refine_storyboard_card(
+    project: dict[str, Any],
+    hook: str,
+    visual_description: str,
+    default_characters: str,
+    refinement_rules: str,
+) -> str:
+    client = get_gemini_client()
+    response = client.models.generate_content(
+        model=SCRIPT_WRITER_MODEL,
+        contents=[
+            *script_reference_images(project),
+            build_refinement_prompt(
+                hook,
+                visual_description,
+                default_characters,
+                refinement_rules,
+            ),
+        ],
+    )
+    refined_prompt = extract_text_response(response).strip()
+    if not refined_prompt:
+        raise ProjectError("Gemini returned an empty refined prompt.")
+    return refined_prompt
 
 
 def build_generate_config(project: dict[str, Any]):
@@ -902,7 +1353,7 @@ def generate_slide_image(project_name: str, slide_index: int, include_existing_i
     client = get_gemini_client()
 
     response = client.models.generate_content(
-        model="gemini-3-pro-image-preview",
+        model=IMAGE_GENERATION_MODEL,
         contents=gemini_contents_for_slide(project, slide, include_existing_image=include_existing_image),
         config=build_generate_config(project),
     )
@@ -952,6 +1403,12 @@ def apply_project_update(project: dict[str, Any], payload: dict[str, Any]) -> di
             slide["images"] = [str(image) for image in incoming_slide.get("images", [])]
             slide["generated"] = bool(incoming_slide.get("generated", slide.get("generated", False)))
             slide["filename"] = str(incoming_slide.get("filename") or f"s{index}.png")
+
+    if "script" in payload:
+        raw_script = payload["script"]
+        if not isinstance(raw_script, dict):
+            raise ProjectError("script must be an object.")
+        apply_script_update(project, raw_script)
 
     return project
 
@@ -1029,6 +1486,169 @@ def get_project(project_name: str):
     return jsonify({"project": project})
 
 
+@app.get("/api/defaults")
+def get_defaults():
+    return jsonify({"defaults": load_global_defaults()})
+
+
+@app.put("/api/defaults")
+def update_defaults():
+    payload = request.get_json(silent=True) or {}
+    defaults = save_global_defaults(payload)
+    return jsonify({"defaults": defaults})
+
+
+@app.get("/api/projects/<project_name>/script")
+def get_project_script(project_name: str):
+    project = load_project(project_name)
+    return jsonify(
+        {
+            "project": serialize_project(project),
+            "defaults": load_global_defaults(),
+            "effective_rules": effective_script_rules(project),
+        }
+    )
+
+
+@app.put("/api/projects/<project_name>/script")
+def update_project_script(project_name: str):
+    ensure_batch_not_running(project_name)
+    payload = request.get_json(silent=True) or {}
+    project = load_project(project_name)
+    previous_project = deepcopy(project)
+    apply_script_update(project, payload)
+    remove_obsolete_slide_assets(previous_project, project)
+    resequence_slide_assets(project)
+    save_project(project)
+    refreshed = load_project(project_name)
+    return jsonify(
+        {
+            "project": serialize_project(refreshed),
+            "defaults": load_global_defaults(),
+            "effective_rules": effective_script_rules(refreshed),
+        }
+    )
+
+
+@app.post("/api/projects/<project_name>/storyboard/generate")
+def generate_storyboard(project_name: str):
+    ensure_batch_not_running(project_name)
+    payload = request.get_json(silent=True) or {}
+    project = load_project(project_name)
+    previous_project = deepcopy(project)
+    if payload:
+        apply_script_update(project, payload)
+
+    script = normalize_script_state(project.get("script"))
+    carousel_idea = script["carousel_idea"].strip()
+    if not carousel_idea:
+        raise ProjectError("Carousel idea is required.")
+
+    rules = effective_script_rules(project)
+    page_count = len(project.get("slides", []))
+    storyboard = generate_storyboard_cards(
+        project,
+        carousel_idea,
+        rules["general_rules"],
+        rules["hook_rules"],
+        rules["default_characters"],
+        page_count,
+    )
+    project["script"]["storyboard"] = storyboard
+    sync_slide_count(project, len(storyboard))
+    remove_obsolete_slide_assets(previous_project, project)
+    resequence_slide_assets(project)
+    save_project(project)
+    refreshed = load_project(project_name)
+    return jsonify(
+        {
+            "project": serialize_project(refreshed),
+            "storyboard": refreshed["script"]["storyboard"],
+            "effective_rules": effective_script_rules(refreshed),
+        }
+    )
+
+
+@app.post("/api/projects/<project_name>/storyboard/regenerate/<int:slide_index>")
+def regenerate_storyboard_slide(project_name: str, slide_index: int):
+    ensure_batch_not_running(project_name)
+    payload = request.get_json(silent=True) or {}
+    project = load_project(project_name)
+    user_notes = str(payload.get("user_notes", "") or "")
+    if payload:
+        apply_script_update(project, payload)
+
+    script = normalize_script_state(project.get("script"))
+    page_count = len(project.get("slides", []))
+    if slide_index < 1 or slide_index > page_count:
+        raise ProjectError("Slide index is out of range.")
+
+    carousel_idea = script["carousel_idea"].strip()
+    if not carousel_idea:
+        raise ProjectError("Carousel idea is required.")
+
+    if len(script["storyboard"]) < page_count:
+        script["storyboard"] = script["storyboard"] + [
+            normalize_storyboard_card({}) for _ in range(page_count - len(script["storyboard"]))
+        ]
+
+    rules = effective_script_rules(project)
+    script["storyboard"][slide_index - 1] = generate_storyboard_card(
+        project,
+        carousel_idea,
+        rules["general_rules"],
+        rules["hook_rules"],
+        rules["default_characters"],
+        slide_index,
+        page_count,
+        user_notes=user_notes,
+    )
+    project["script"] = script
+    save_project(project)
+    refreshed = load_project(project_name)
+    return jsonify(
+        {
+            "project": serialize_project(refreshed),
+            "slide": refreshed["script"]["storyboard"][slide_index - 1],
+            "effective_rules": effective_script_rules(refreshed),
+        }
+    )
+
+
+@app.post("/api/projects/<project_name>/script/refine")
+def refine_script_to_prompts(project_name: str):
+    ensure_batch_not_running(project_name)
+    payload = request.get_json(silent=True) or {}
+    project = load_project(project_name)
+    previous_project = deepcopy(project)
+    if payload:
+        apply_script_update(project, payload)
+
+    script = normalize_script_state(project.get("script"))
+    storyboard = script["storyboard"]
+    if not storyboard:
+        raise ProjectError("Storyboard is required before refinement.")
+
+    sync_slide_count(project, len(storyboard))
+    rules = effective_script_rules(project)
+    refinement_rules = rules["refinement_rules"]
+    for index, card in enumerate(storyboard, start=1):
+        slide = get_slide(project, index)
+        slide["prompt"] = refine_storyboard_card(
+            project,
+            card["hook"],
+            card["visual_description"],
+            rules["default_characters"],
+            refinement_rules,
+        )
+
+    remove_obsolete_slide_assets(previous_project, project)
+    resequence_slide_assets(project)
+    save_project(project)
+    refreshed = load_project(project_name)
+    return jsonify({"project": serialize_project(refreshed)})
+
+
 @app.put("/api/projects/<project_name>")
 def update_project(project_name: str):
     ensure_batch_not_running(project_name)
@@ -1073,6 +1693,13 @@ def update_slide(project_name: str, slide_index: int):
 
 @app.post("/api/projects/<project_name>/generate-all")
 def generate_all(project_name: str):
+    payload = request.get_json(silent=True)
+    if payload is not None:
+        if not isinstance(payload, dict):
+            raise ProjectError("Invalid payload.")
+        project = load_project(project_name)
+        apply_project_update(project, payload)
+        save_project(project)
     project = start_background_generation(project_name)
     return jsonify(
         {
